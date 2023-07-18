@@ -1,9 +1,9 @@
 #!/bin/bash
 streamers=(crazymango_vr aeriytheneko isthisrealvr)
 game="VRChat"
-destpath="/Drobo/Nyx"
-configfile="/root/Mango/.twitchrecord.conf"
-authorizationfile="/root/Mango/.twitchcreds.conf"
+destpath="/Nyx"
+configfile="/root/.twitchrecord.conf"
+authorizationfile="/root/.twitchcreds.conf"
 
 #Run a for loop on the streamers array so we can use multiple names to record.
 fnStart(){
@@ -67,7 +67,7 @@ fnRequest(){
 fnStartRecord(){
 	# Creates an output name of "streamer_S(two digit year)E(julian date)_stream title_[streamid]"
 	outputname=$(echo $request | jq -j --arg jdate $(date +"%j") --arg ydate $(date +"%y") --arg random $RANDOM '.data[].user_login," - S",$ydate,"E",$jdate," - ",.data[].title," [",.data[].id + $random,"]"' | tr -dc '[:print:]')
-	screen -dmS $streamer bash -c "streamlink --stdout https://www.twitch.tv/$streamer best | ffmpeg -i - -c copy \"/Drobo/Nyx/$streamer/$outputname.mkv\""
+	screen -dmS $streamer bash -c "streamlink --stdout https://www.twitch.tv/$streamer best | ffmpeg -i - -c copy \"$destpath/$streamer/$outputname.mkv\""
 }
 
 fnStopRecord(){
