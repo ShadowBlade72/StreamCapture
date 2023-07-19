@@ -2,8 +2,8 @@
 ######CONFIGURATION######
 
 #Enter your streamers seperated by spaces.  If they have a space in their name, use quotes around their name.
-twitchstreamers=()
-kickstreamers=(empressraeon)
+twitchstreamers=(crazymango_vr aeriytheneko isthisrealvr)
+kickstreamers=(CrazyMangoVR blu-haze)
 
 #Enter a list of games you want to monitor the streamers for seperated by spaces.  If there is a space in the name, use quotes around the name.
 monitortwitchgame=1
