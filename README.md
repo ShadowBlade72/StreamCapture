@@ -10,6 +10,8 @@ You'll need the following packages to get this working.
 - jq
   - apt install jq
 - Streamlink
+  - apt install streamlink
+- Streamlink Kick Plugin
   - https://github.com/nonvegan/streamlink-plugin-kick/tree/master
 - curl-impersonate
   - https://github.com/lwthiker/curl-impersonate
