@@ -4,6 +4,16 @@ A shell script to automatically download a copy of a live stream.  Recommend set
 
 This script is setup to only record a stream if the streamer is playing the identified game listed under "game".  It will also terminate the recording if they switch away from that game.
 
+## Requirements
+You'll need the following packages to get this working.
+
+- jq
+  - apt install jq
+- Streamlink
+  - https://github.com/nonvegan/streamlink-plugin-kick/tree/master
+- curl-impersonate
+  - https://github.com/lwthiker/curl-impersonate
+
 ## Setup
 You'll need to register for a developer account in order to make API calls.  These are currently utilized to pull the stream name automatically.  
 
@@ -38,8 +48,6 @@ You'll need to register for a developer account in order to make API calls.  The
   - authorizationfile="/root/Mango/.twitchcreds.conf"
   - configfile="/root/Mango/.twitchrecord.conf"
 
-- #TODO: Do we want to use the kick "API".  If so, we need curl-impersonate. Otherwise fall back to legacy mode. Having this enabled allows better episode naming.
-- #TODO: For now kickapi must be set to 1 and we must have curl-impersonate until I implement a legacy mode.
-- curl-impersonate can be downloaded here https://github.com/lwthiker/curl-impersonate
+- Do we want to use the kick "API".  If so, we need curl-impersonate. Otherwise fall back to legacy mode. Having this enabled allows better episode naming.
   - kickapi=1
   - curlimp="/opt/curl-impersonate/curl_chrome110"

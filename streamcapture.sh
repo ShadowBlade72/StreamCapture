@@ -19,12 +19,37 @@ destpath="/Drobo/Nyx"
 authorizationfile="/root/Mango/.twitchcreds.conf"
 configfile="/root/Mango/.twitchrecord.conf"
 
-#TODO: Do we want to use the kick "API".  If so, we need curl-impersonate. Otherwise fall back to legacy mode. Having this enabled allows better episode naming.
-#TODO: For now kickapi must be set to 1 and we must have curl-impersonate until I implement a legacy mode.
+# Do we want to use the kick "API".  If so, we need curl-impersonate. Otherwise fall back to legacy mode. Having this enabled allows better episode naming.
 kickapi=1
 curlimp="/opt/curl-impersonate/curl_chrome110"
 
 ######CONFIGURATION######
+
+#DEFINE COLORS
+GREEN='\e[32m'
+YELLOW='\e[33m'
+RED='\e[31m'
+BLUE='\e[96m'
+NC='\e[0m'
+
+fnDependencyCheck(){
+	if [[ $kickapi = 1 && ! -f $curlimp ]]; then
+		echo -e "[${RED}-${NC}] ${BLUE}curl-impersonate${NC} not found at ${RED}$curlimp${NC}"
+		missdep=1
+	fi
+	if [[ ! -f $(which jq) ]]; then
+		echo -e "[${RED}-${NC}] ${BLUE}jq${NC} not found!"
+                missdep=1
+        fi
+	if [[ $(streamlink --can-handle-url https://www.kick.com/test) && $? == 1 ]]; then
+	        echo -e "[${RED}-${NC}] streamlink ${BLUE}kick plugin${NC} not found!"
+        	missdep=1
+        fi
+	if [[ $missdep == 1 ]]; then
+		echo -en "[${RED}-${NC}] "
+		read -p "Dependencies missing... press any key to continue or ctrl+c to exit."
+	fi
+}
 
 #Run a for loop on the streamers array so we can use multiple names to record.
 fnStart(){
@@ -65,8 +90,7 @@ fnConfig(){
 	if [[ $kick == 1 && $kickapi == 1 ]]; then
 		fnRequestKick
 	elif [[ $kick == 1 ]]; then
-		echo "why are we here..."
-		fnRequestKickLegacy
+		fnKickRecordLegacy
 	fi
 }
 #Request a new access token if the one from the config file can't be loaded or is expired.
@@ -95,7 +119,7 @@ fnRequestTwitch(){
 		#If they change game and we have stop recording set, then stop recording.
 		fnStopRecord
 	else
-		echo "[-] $streamer is not live in $game or we're already recording."
+		echo "[-] $streamer is not live in ${game[@]} or we're already recording."
 		#echo $request
 	fi
 	unset twitch
@@ -111,7 +135,7 @@ fnRequestKick(){
 	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && ! ${game[@]} =~ $(echo $request | jq -r '.livestream.categories[]?.name // null') && $stopkickrecord == 1 && $monitorkickgame == 1 ]]; then
 		fnStopRecord
 	else
-		echo "[-] $streamer is not live in $game or we're already recording."
+		echo "[-] $streamer is not live in ${game[@]} or we're already recording."
 		#echo $request
 	fi
 	unset kick	
@@ -131,10 +155,18 @@ fnStartKickRecord(){
 	screen -dmS $streamer bash -c "streamlink --stdout https://www.kick.com/$streamer best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
 }
 
+fnKickRecordLegacy(){
+	# We're basically skipping all checks of if someone is online or not and just brute forcing trying to record.  If they're not online it'll just error out.
+	if [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) ]]; then
+		screen -dmS $streamer bash -c "streamlink --output \"$destpath/{author}/{title} {id}.mp4\" https://www.kick.com/$streamer best"
+	fi
+}
+
 fnStopRecord(){
 	#This sends a ctrl+c (SIGINT) to the screen to gracefully stop the recording.
 	#echo "Stopping recording of $streamer." >> ./log.txt
 	screen -S $streamer -X stuff $'\003'
 }
 
+fnDependencyCheck
 fnStart
