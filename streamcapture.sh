@@ -131,7 +131,7 @@ fnRequestTwitch(){
 
 fnRequestKick(){
 	request=$($curlimp -s "https://kick.com/api/v2/channels/$streamer")
-	if [[ $(echo $request | jq -r '.error') != "null" ]]; then
+	if [[ $(echo $request | grep "Not Found" ]]; then
 		echo "Something happened to your streamer... they don't exist or the site is blocking your requests."
 	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && $(echo $request | jq -r '.livestream.is_live') == "true" ]] && [[ ${game[@]} =~ $(echo $request | jq -r '.livestream.categories[]?.name // null') || $monitorkickgame == 0 ]]; then
 		#If we aren't already recording, and the game they're playing matches what we want to record, then start recording.
