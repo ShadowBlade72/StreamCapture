@@ -122,8 +122,10 @@ fnRequestTwitch(){
 	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.twitch.tv/$streamer" | grep streamlink) && ! ${game[@]} =~ $(echo $request | jq -r '.data[]?.game_name // null') && $stoptwitchrecord == 1 && $monitortwitchgame == 1 ]]; then
 		#If they change game and we have stop recording set, then stop recording.
 		fnStopRecord
+	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.twitch.tv/$streamer" | grep streamlink) ]]; then
+		echo -e "[${GREEN}+${NC}] ${BLUE}$streamer${NC} is live in ${YELLOW}$(echo $request | jq -r '.data[]?.game_name // null')${NC} and we're already recording."
 	else
-		echo "[-] $streamer is not live in ${game[@]} or we're already recording."
+		echo -e "[${RED}-${NC}] ${BLUE}$streamer${NC} is not live in ${YELLOW}${game[@]}${NC}."
 		#echo $request
 	fi
 	unset twitch
@@ -131,15 +133,17 @@ fnRequestTwitch(){
 
 fnRequestKick(){
 	request=$($curlimp -s "https://kick.com/api/v2/channels/$streamer")
-	if [[ $(echo $request | grep "Not Found" ) ]]; then
-		echo "Something happened to your streamer... they don't exist or the site is blocking your requests."
+	if [[ ! $(echo $request | grep "user_id" ) ]]; then
+		echo -e "[${RED}-${NC}] ${BLUE}$streamer${NC}: Something happened to your streamer... they don't exist or the site is blocking your requests."
 	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && $(echo $request | jq -r '.livestream.is_live') == "true" ]] && [[ ${game[@]} =~ $(echo $request | jq -r '.livestream.categories[]?.name // null') || $monitorkickgame == 0 ]]; then
 		#If we aren't already recording, and the game they're playing matches what we want to record, then start recording.
 		fnStartKickRecord
 	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && ! ${game[@]} =~ $(echo $request | jq -r '.livestream.categories[]?.name // null') && $stopkickrecord == 1 && $monitorkickgame == 1 ]]; then
 		fnStopRecord
+	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) ]]; then
+		echo -e "[${GREEN}+${NC}] ${BLUE}$streamer${NC} is live in ${YELLOW}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC} and we're already recording."
 	else
-		echo "[-] $streamer is not live in ${game[@]} or we're already recording."
+		echo -e "[${RED}-${NC}] ${BLUE}$streamer${NC} is not live in ${YELLOW}${game[@]}${NC} or we're already recording."
 		#echo $request
 	fi
 	unset kick	
@@ -149,7 +153,7 @@ fnStartTwitchRecord(){
 	# Creates an output name of "streamer_S(two digit year)E(julian date)_stream title_[streamid]"
 	outputname=$(echo $request | jq -j --arg jdate $(date +"%j") --arg ydate $(date +"%y") --arg random $RANDOM '.data[].user_login," - S",$ydate,"E",$jdate," - ",.data[].title," [",.data[].id + $random,"]"' | tr -dc '[:print:]' | tr -d '/')
 	if [[ $logging = 1 ]]; then
-		echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - Starting recording of ${BLUE}$streamer${NC}. File name: ${YELLOW}$outputname${NC}" >> $destpath/log.txt
+		echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - Starting recording of ${BLUE}$streamer${NC}. File name: ${YELLOW}$outputname.mp4${NC}" >> $destpath/log.txt
 	fi
 	screen -dmS $streamer bash -c "streamlink --stdout https://www.twitch.tv/$streamer best | ffmpeg -i - -c copy \"$destpath/$streamer/$outputname.mp4\""
 }
@@ -158,7 +162,7 @@ fnStartKickRecord(){
 	# Creates an output name of "streamer_S(two digit year)E(julian date)_stream title_[streamid]"
 	outputname=$(echo $request | jq -j --arg jdate $(date +"%j") --arg ydate $(date +"%y") --arg random $RANDOM '.user.username," - S",$ydate,"E",$jdate," - ",.livestream.session_title," [",(.livestream.id|tostring) + $random,"]"' | tr -dc '[:print:]' | tr -d '/')
         if [[ $logging = 1 ]]; then
-		echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - Starting recording of ${BLUE}$streamer${NC}. File name: ${YELLOW}$outputname${NC}" >> $destpath/log.txt	
+		echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - Starting recording of ${BLUE}$streamer${NC}. File name: ${YELLOW}$outputname.mp4${NC}" >> $destpath/log.txt	
 	fi
 	screen -dmS $streamer bash -c "streamlink --stdout https://www.kick.com/$streamer best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
 }
