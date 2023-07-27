@@ -3,7 +3,7 @@
 
 #Enter your streamers seperated by spaces.  If they have a space in their name, use quotes around their name.
 twitchstreamers=(crazymango_vr aeriytheneko isthisrealvr)
-kickstreamers=(CrazyMangoVR blu-haze)
+kickstreamers=(CrazyMangoVR blu-haze VreyVrey)
 
 #Enter a list of games you want to monitor the streamers for seperated by spaces.  If there is a space in the name, use quotes around the name.
 monitortwitchgame=1
@@ -121,6 +121,7 @@ fnRequestTwitch(){
 		fnStartTwitchRecord
 	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.twitch.tv/$streamer" | grep streamlink) && ! ${game[@]} =~ $(echo $request | jq -r '.data[]?.game_name // null') && $stoptwitchrecord == 1 && $monitortwitchgame == 1 ]]; then
 		#If they change game and we have stop recording set, then stop recording.
+		stopgame=$(echo $request | jq -r '.data[]?.game_name // null')
 		fnStopRecord
 	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.twitch.tv/$streamer" | grep streamlink) ]]; then
 		echo -e "[${GREEN}+${NC}] ${BLUE}$streamer${NC} is live in ${YELLOW}$(echo $request | jq -r '.data[]?.game_name // null')${NC} and we're already recording."
@@ -139,6 +140,7 @@ fnRequestKick(){
 		#If we aren't already recording, and the game they're playing matches what we want to record, then start recording.
 		fnStartKickRecord
 	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && ! ${game[@]} =~ $(echo $request | jq -r '.livestream.categories[]?.name // null') && $stopkickrecord == 1 && $monitorkickgame == 1 ]]; then
+		stopgame=$(echo $request | jq -r '.livestream.categories[]?.name // null')
 		fnStopRecord
 	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) ]]; then
 		echo -e "[${GREEN}+${NC}] ${BLUE}$streamer${NC} is live in ${YELLOW}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC} and we're already recording."
@@ -177,7 +179,7 @@ fnKickRecordLegacy(){
 fnStopRecord(){
 	#This sends a ctrl+c (SIGINT) to the screen to gracefully stop the recording.
         if [[ $logging = 1 ]]; then
-		echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - Stopping recording of ${BLUE}$streamer${NC}." >> $destpath/log.txt
+		echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - Stopping recording of ${BLUE}$streamer${NC}. $stopgame not in ${game[@]}." >> $destpath/log.txt
 	fi
 	screen -S $streamer -X stuff $'\003'
 }
