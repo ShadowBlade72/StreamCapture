@@ -57,16 +57,22 @@ fnDependencyCheck(){
 
 #Run a for loop on the streamers array so we can use multiple names to record.
 fnStart(){
-	for streamer in "${twitchstreamers[@]}"; do
-		unset kick
-		twitch=1
-		fnConfig
-	done
-	for streamer in "${kickstreamers[@]}"; do
-		unset twitch
-		kick=1
-		fnConfig
-	done
+	if [[ -n ${twitchstreamers[@]} ]]; then
+		echo -e "[${GREEN}---${NC}]Twitch:[${GREEN}---${NC}]"
+		for streamer in "${twitchstreamers[@]}"; do
+			unset kick
+			twitch=1
+			fnConfig
+		done
+	fi
+	if [[ -n ${kickstreamers[@]} ]]; then
+		echo -e "[${GREEN}---${NC}]Kick:[${GREEN}---${NC}]"
+		for streamer in "${kickstreamers[@]}"; do
+			unset twitch
+			kick=1
+			fnConfig
+		done
+	fi
 }
 
 #Check to see if the config file exists. If there are issues with it, the fnRequestTwitch will delete it and start over.
@@ -136,6 +142,8 @@ fnRequestKick(){
 	request=$($curlimp -s "https://kick.com/api/v2/channels/$streamer")
 	if [[ ! $(echo $request | grep "user_id" ) ]]; then
 		echo -e "[${RED}-${NC}] ${BLUE}$streamer${NC}: Something happened to your streamer... they don't exist or the site is blocking your requests."
+		echo -e "[${RED}-${NC}] ${BLUE}$streamer${NC}: Falling back to legacy recording to see if they're live."
+		fnKickRecordLegacy
 	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && $(echo $request | jq -r '.livestream.is_live') == "true" ]] && [[ ${game[@]} =~ $(echo $request | jq -r '.livestream.categories[]?.name // null') || $monitorkickgame == 0 ]]; then
 		#If we aren't already recording, and the game they're playing matches what we want to record, then start recording.
 		fnStartKickRecord
@@ -145,7 +153,7 @@ fnRequestKick(){
 	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) ]]; then
 		echo -e "[${GREEN}+${NC}] ${BLUE}$streamer${NC} is live in ${YELLOW}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC} and we're already recording."
 	else
-		echo -e "[${RED}-${NC}] ${BLUE}$streamer${NC} is not live in ${YELLOW}${game[@]}${NC} or we're already recording."
+		echo -e "[${RED}-${NC}] ${BLUE}$streamer${NC} is not live in ${YELLOW}${game[@]}${NC}."
 		#echo $request
 	fi
 	unset kick	
