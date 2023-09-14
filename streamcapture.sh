@@ -167,18 +167,18 @@ fnRequestKick(){
 
 fnStartTwitchRecord(){
 	# Creates an output name of "streamer_S(two digit year)E(julian date)_stream title_[streamid]"
-	outputname=$(echo $request | jq -j --arg jdate $(date +"%j") --arg ydate $(date +"%y") --arg random $RANDOM '.data[].user_login," - S",$ydate,"E",$jdate," - ",.data[].title," [",.data[].id + $random,"]"' | tr -dc '[:print:]' | tr -d '/')
+	outputname=$(echo $request | jq -j --arg jdate $(date +"%j") --arg ydate $(date +"%y") --arg random $RANDOM '.data[].user_login," - S",$ydate,"E",$jdate," - ",.data[].title," [",.data[].id + $random,"]"' | tr -dc '[:print:]' | tr -d '<>:"/\\|?*' | tr -s " ")
 	if [[ $logging = 1 ]]; then
-		echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - Starting recording of ${BLUE}$streamer${NC} playing ${YELLOW}$(echo $request | jq -r '.data[]?.game_name // null')${NC}. File name: ${YELLOW}$outputname.mp4${NC}" | tee -a $destpath/log.txt
+		echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - Starting recording of ${BLUE}$streamer${NC} playing ${GREEN}$(echo $request | jq -r '.data[]?.game_name // null')${NC}. File name: ${YELLOW}$outputname.mp4${NC}" | tee -a $destpath/log.txt
 	fi
 	screen -dmS $streamer bash -c "streamlink --stdout https://www.twitch.tv/$streamer best | ffmpeg -i - -c copy \"$destpath/$streamer/$outputname.mp4\""
 }
 
 fnStartKickRecord(){
 	# Creates an output name of "streamer_S(two digit year)E(julian date)_stream title_[streamid]"
-	outputname=$(echo $request | jq -j --arg jdate $(date +"%j") --arg ydate $(date +"%y") --arg random $RANDOM '.user.username," - S",$ydate,"E",$jdate," - ",.livestream.session_title," [",(.livestream.id|tostring) + $random,"]"' | tr -dc '[:print:]' | tr -d '/')
+	outputname=$(echo $request | jq -j --arg jdate $(date +"%j") --arg ydate $(date +"%y") --arg random $RANDOM '.user.username," - S",$ydate,"E",$jdate," - ",.livestream.session_title," [",(.livestream.id|tostring) + $random,"]"' | tr -dc '[:print:]' | tr -d '<>:"/\\|?*' | tr -s " " )
         if [[ $logging = 1 ]]; then
-		echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - Starting recording of ${BLUE}$streamer${NC} playing ${YELLOW}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC}. File name: ${YELLOW}$outputname.mp4${NC}" | tee -a $destpath/log.txt	
+		echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - Starting recording of ${BLUE}$streamer${NC} playing ${GREEN}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC}. File name: ${YELLOW}$outputname.mp4${NC}" | tee -a $destpath/log.txt	
 	fi
 	screen -dmS $streamer bash -c "streamlink --stdout https://www.kick.com/$streamer best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
 }
