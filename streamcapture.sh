@@ -2,20 +2,20 @@
 ######CONFIGURATION######
 
 #Enter your streamers seperated by spaces.  If they have a space in their name, use quotes around their name.
-twitchstreamers=(crazymango_vr aeriytheneko isthisrealvr)
-kickstreamers=(CrazyMangoVR blu-haze VreyVrey)
+twitchstreamers=(crazymango_vr aeriytheneko isthisrealvr Vrey blu_haze Ikumi)
+kickstreamers=(CrazyMangoVR blu-haze VreyVrey MikaMoonlight roflgator)
 
 #Enter a list of games you want to monitor the streamers for seperated by spaces.  If there is a space in the name, use quotes around the name.
 monitortwitchgame=1
 monitorkickgame=0
-game=(VRChat)
+game=(VRChat ASMR)
 
 #Do you want to stop recording if your streamer switches games?
 stoptwitchrecord=1
 stopkickrecord=0
 
-#Destination path is where you'll save the recordings.  The authorization file is for your Twitch API credentials, and the configfile is where it'll save your bearer token once it authenticates.
-destpath="/Drobo/Nyx"
+#Destination path is where you'll save the recordings.  The authorization file is for your Twitch API credentials, and teh configfile is where it'll save your bearer token once it authenticates.
+destpath="/Drobo/Hareis"
 authorizationfile="/root/Mango/.twitchcreds.conf"
 configfile="/root/Mango/.twitchrecord.conf"
 
@@ -58,7 +58,7 @@ fnDependencyCheck(){
 #Run a for loop on the streamers array so we can use multiple names to record.
 fnStart(){
 	if [[ -n ${twitchstreamers[@]} ]]; then
-		echo -e "[${GREEN}---${NC}]Twitch:[${GREEN}---${NC}]"
+		echo -e "[${GREEN}---${NC}] Twitch: [${GREEN}---${NC}]"
 		for streamer in "${twitchstreamers[@]}"; do
 			unset kick
 			twitch=1
@@ -66,7 +66,7 @@ fnStart(){
 		done
 	fi
 	if [[ -n ${kickstreamers[@]} ]]; then
-		echo -e "[${GREEN}---${NC}]Kick:[${GREEN}---${NC}]"
+		echo -e "[${GREEN}---${NC}] Kick: [${GREEN}---${NC}]"
 		for streamer in "${kickstreamers[@]}"; do
 			unset twitch
 			kick=1
@@ -82,7 +82,7 @@ fnConfig(){
 	fi
 	if [[ $twitch == 1 ]]; then
 		if [[ ! -f $authorizationfile ]]; then
-			echo "Config file with authorization credentials missing!"
+			echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Twitch:${NC} Config file with authorization credentials missing!" |  tee -a $destpath/log.txt
 			touch $authorizationfile
 			echo "clientid=" >> $authorizationfile
 			echo "clientsecret=" >> $authorizationfile
@@ -103,13 +103,18 @@ fnConfig(){
 		fnKickRecordLegacy
 	fi
 }
+
 #Request a new access token if the one from the config file can't be loaded or is expired.
 fnAccessToken(){
 	if [[ -z $request || $(echo $request | jq -r '.error') != "null" || -z $access_token ]]; then
 		#This is doing the oauth authentication and saving the bearer token that we receive to the config file.
 		access_token=$(curl -s -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials&client_id=$clientid&client_secret=$clientsecret" https://id.twitch.tv/oauth2/token | jq -r '.access_token')
-		echo "access_token=$access_token" > $configfile
-		echo "Pulled new access token! - $access_token"
+		if [[ $(echo $access_token | wc -c) == 31 ]]; then
+			echo "access_token=$access_token" > $configfile
+			echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}Twitch:${NC} Pulled new access token!" | tee -a $destpath/log.txt
+		else
+			echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Twitch:${NC} Error pulling new access token. Check your API credentials! Token response: $access_token" | tee -a $destpath/log.txt
+		fi
 	fi
 }
 
@@ -120,23 +125,20 @@ fnRequestTwitch(){
 		#echo "Token Error: $(echo $request | jq -r '.error') ---- $access_token"
 		unset access_token
 		rm $configfile
-		echo "Cleared config... returning to config."
 		fnConfig
 	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.twitch.tv/$streamer" | grep streamlink)  && $(echo $request | jq -r '.data[].type') == "live" ]] && [[ ${game[@]} =~ $(echo $request | jq -r '.data[]?.game_name // null') || $monitortwitchgame == 0 ]]; then
 		#If we aren't already recording, and the game they're playing matches what we want to record, then start recording.
-
 		fnStartTwitchRecord
 	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.twitch.tv/$streamer" | grep streamlink) && $(echo $request | jq -r '.data[].type') == "live" && ! ${game[@]} =~ $(echo $request | jq -r '.data[]?.game_name // null') && $stoptwitchrecord == 1 && $monitortwitchgame == 1 ]]; then
 		#If they change game and we have stop recording set, then stop recording.
 		stopgame=$(echo $request | jq -r '.data[]?.game_name // null')
 		fnStopRecord
 	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.twitch.tv/$streamer" | grep streamlink) ]]; then
-		echo -e "[${GREEN}+${NC}] ${BLUE}$streamer${NC} is live in ${YELLOW}$(echo $request | jq -r '.data[]?.game_name // null')${NC} and we're already recording."
+		echo -e "[${GREEN}+${NC}] ${GREEN}Twitch:${NC} ${BLUE}$streamer${NC} is live in ${YELLOW}$(echo $request | jq -r '.data[]?.game_name // null')${NC} and we're already recording."
 	elif [[ $(echo $request | jq -r '.data[].type') == "live" ]]; then
-		echo -e "[${YELLOW}/${NC}] ${BLUE}$streamer${NC} is live in ${RED}$(echo $request | jq -r '.data[]?.game_name // null')${NC} which is not in ${YELLOW}${game[@]}${NC}."
+		echo -e "[${YELLOW}/${NC}] ${YELLOW}Twitch:${NC} ${BLUE}$streamer${NC} is live in ${RED}$(echo $request | jq -r '.data[]?.game_name // null')${NC} which is not in ${YELLOW}${game[@]}${NC}."
 	else
-		echo -e "[${RED}-${NC}] ${BLUE}$streamer${NC} is not live."
-		#echo $request
+		echo -e "[${RED}-${NC}] ${RED}Twitch:${NC} ${BLUE}$streamer${NC} is not live."
 	fi
 	unset twitch
 }
@@ -144,8 +146,7 @@ fnRequestTwitch(){
 fnRequestKick(){
 	request=$($curlimp -s "https://kick.com/api/v2/channels/$streamer")
 	if [[ ! $(echo $request | grep "user_id" ) ]]; then
-		echo -e "[${RED}-${NC}] ${BLUE}$streamer${NC}: Something happened to your streamer... they don't exist or the site is blocking your requests."
-		echo -e "[${RED}-${NC}] ${BLUE}$streamer${NC}: Falling back to legacy recording to see if they're live."
+		echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Kick:${NC} ${BLUE}$streamer${NC}: Something happened to your streamer... they don't exist or the site is blocking your requests.  Falling back to legacy recording to see if they're live."  | tee -a $destpath/log.txt
 		fnKickRecordLegacy
 	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && $(echo $request | jq -r '.livestream.is_live') == "true" ]] && [[ ${game[@]} =~ $(echo $request | jq -r '.livestream.categories[]?.name // null') || $monitorkickgame == 0 ]]; then
 		#If we aren't already recording, and the game they're playing matches what we want to record, then start recording.
@@ -155,12 +156,11 @@ fnRequestKick(){
 		stopgame=$(echo $request | jq -r '.livestream.categories[]?.name // null')
 		fnStopRecord
 	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) ]]; then
-		echo -e "[${GREEN}+${NC}] ${BLUE}$streamer${NC} is live in ${YELLOW}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC} and we're already recording."
+		echo -e "[${GREEN}+${NC}] ${GREEN}Kick:${NC} ${BLUE}$streamer${NC} is live in ${YELLOW}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC} and we're already recording."
 	elif [[ $(echo $request | jq -r '.livestream.is_live') == "true" ]]; then
-		echo -e "[${YELLOW}/${NC}] ${BLUE}$streamer${NC} is live in ${RED}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC} which is not in ${YELLOW}${game[@]}${NC}."
+		echo -e "[${YELLOW}/${NC}] ${YELLOW}Kick:${NC} ${BLUE}$streamer${NC} is live in ${RED}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC} which is not in ${YELLOW}${game[@]}${NC}."
 	else
-		echo -e "[${RED}-${NC}] ${BLUE}$streamer${NC} is not live."
-		#echo $request
+		echo -e "[${RED}-${NC}] ${RED}Kick:${NC} ${BLUE}$streamer${NC} is not live."
 	fi
 	unset kick	
 }
