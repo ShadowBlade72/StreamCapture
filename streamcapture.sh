@@ -14,7 +14,7 @@ game=(VRChat ASMR)
 stoptwitchrecord=1
 stopkickrecord=0
 
-#Destination path is where you'll save the recordings.  The authorization file is for your Twitch API credentials, and teh configfile is where it'll save your bearer token once it authenticates.
+#Destination path is where you'll save the recordings.  The authorization file is for your Twitch API credentials, and the configfile is where it'll save your bearer token once it authenticates.
 destpath="/Drobo/Hareis"
 authorizationfile="/root/Mango/.twitchcreds.conf"
 configfile="/root/Mango/.twitchrecord.conf"
@@ -146,7 +146,7 @@ fnRequestTwitch(){
 fnRequestKick(){
 	request=$($curlimp -s "https://kick.com/api/v2/channels/$streamer")
 	if [[ ! $(echo $request | grep "user_id" ) ]]; then
-		echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Kick:${NC} ${BLUE}$streamer${NC}: Something happened to your streamer... they don't exist or the site is blocking your requests.  Falling back to legacy recording to see if they're live."  | tee -a $destpath/log.txt
+		echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Kick:${NC} ${BLUE}$streamer${NC}: Something happened to your streamer... they don't exist or the site is blocking your requests.  Falling back to legacy recording to see if they're live." | tee -a $destpath/log.txt
 		fnKickRecordLegacy
 	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && $(echo $request | jq -r '.livestream.is_live') == "true" ]] && [[ ${game[@]} =~ $(echo $request | jq -r '.livestream.categories[]?.name // null') || $monitorkickgame == 0 ]]; then
 		#If we aren't already recording, and the game they're playing matches what we want to record, then start recording.
