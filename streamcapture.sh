@@ -126,10 +126,10 @@ fnRequestTwitch(){
 		unset access_token
 		rm $configfile
 		fnConfig
-	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.twitch.tv/$streamer" | grep streamlink)  && $(echo $request | jq -r '.data[].type') == "live" ]] && [[ ${game[@]} =~ $(echo $request | jq -r '.data[]?.game_name // null') || $monitortwitchgame == 0 ]]; then
+	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.twitch.tv/$streamer" | grep streamlink)  && $(echo $request | jq -r '.data[].type') == "live" ]] && [[ " ${game[@]} " =~ " $(echo $request | jq -r '.data[]?.game_name // null') " || $monitortwitchgame == 0 ]]; then
 		#If we aren't already recording, and the game they're playing matches what we want to record, then start recording.
 		fnStartTwitchRecord
-	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.twitch.tv/$streamer" | grep streamlink) && $(echo $request | jq -r '.data[].type') == "live" && ! ${game[@]} =~ $(echo $request | jq -r '.data[]?.game_name // null') && $stoptwitchrecord == 1 && $monitortwitchgame == 1 ]]; then
+	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.twitch.tv/$streamer" | grep streamlink) && $(echo $request | jq -r '.data[].type') == "live" && ! " ${game[@]} " =~ " $(echo $request | jq -r '.data[]?.game_name // null') " && $stoptwitchrecord == 1 && $monitortwitchgame == 1 ]]; then
 		#If they change game and we have stop recording set, then stop recording.
 		stopgame=$(echo $request | jq -r '.data[]?.game_name // null')
 		fnStopRecord
@@ -148,10 +148,10 @@ fnRequestKick(){
 	if [[ ! $(echo $request | grep "user_id" ) ]]; then
 		echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Kick:${NC} ${BLUE}$streamer${NC}: Something happened to your streamer... they don't exist or the site is blocking your requests.  Falling back to legacy recording to see if they're live." | tee -a $destpath/log.txt
 		fnKickRecordLegacy
-	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && $(echo $request | jq -r '.livestream.is_live') == "true" ]] && [[ ${game[@]} =~ $(echo $request | jq -r '.livestream.categories[]?.name // null') || $monitorkickgame == 0 ]]; then
+	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && $(echo $request | jq -r '.livestream.is_live') == "true" ]] && [[ " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " || $monitorkickgame == 0 ]]; then
 		#If we aren't already recording, and the game they're playing matches what we want to record, then start recording.
 		fnStartKickRecord
-	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && $(echo $request | jq -r '.livestream.is_live') == "true" && ! ${game[@]} =~ $(echo $request | jq -r '.livestream.categories[]?.name // null') && $stopkickrecord == 1 && $monitorkickgame == 1 ]]; then
+	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && $(echo $request | jq -r '.livestream.is_live') == "true" && ! " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " && $stopkickrecord == 1 && $monitorkickgame == 1 ]]; then
 		#If they change game and we have stop recording set, then stop recording.
 		stopgame=$(echo $request | jq -r '.livestream.categories[]?.name // null')
 		fnStopRecord
@@ -162,7 +162,7 @@ fnRequestKick(){
 	else
 		echo -e "[${RED}-${NC}] ${RED}Kick:${NC} ${BLUE}$streamer${NC} is not live."
 	fi
-	unset kick	
+	unset kick
 }
 
 fnStartTwitchRecord(){
@@ -171,7 +171,7 @@ fnStartTwitchRecord(){
 	if [[ $logging = 1 ]]; then
 		echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}Twitch:${NC} Starting recording of ${BLUE}$streamer${NC} playing ${GREEN}$(echo $request | jq -r '.data[]?.game_name // null')${NC}. File name: ${YELLOW}$outputname.mp4${NC}" | tee -a $destpath/log.txt
 	fi
-	screen -dmS $streamer bash -c "streamlink --stdout https://www.twitch.tv/$streamer best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
+	screen -dmS $streamer bash -c "streamlink --stdout https://www.twitch.tv/$streamer best | ffmpeg -i - -c copy \"$destpath/$streamer/$outputname.mp4\""
 }
 
 fnStartKickRecord(){
@@ -180,7 +180,7 @@ fnStartKickRecord(){
         if [[ $logging = 1 ]]; then
 		echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}Kick:${NC} Starting recording of ${BLUE}$streamer${NC} playing ${GREEN}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC}. File name: ${YELLOW}$outputname.mp4${NC}" | tee -a $destpath/log.txt	
 	fi
-	screen -dmS $streamer bash -c "streamlink --stdout https://www.kick.com/$streamer best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
+	screen -dmS $streamer bash -c "streamlink --stdout https://www.kick.com/$streamer best | ffmpeg -i - -c copy \"$destpath/$streamer/$outputname.mp4\""
 }
 
 fnKickRecordLegacy(){
