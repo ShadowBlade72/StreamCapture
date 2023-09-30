@@ -25,7 +25,6 @@ curlimp="/opt/curl-impersonate/curl_chrome110"
 
 # Do we want to enable logging?
 logging=1
-logfile=$destpath
 
 ######CONFIGURATION######
 
@@ -49,10 +48,19 @@ fnDependencyCheck(){
 	        echo -e "[${RED}-${NC}] streamlink ${BLUE}kick plugin${NC} not found!"
         	missdep=1
         fi
+	if [[ ! -d $destpath ]]; then
+		echo -e "[${RED}-${NC}] Destination path \"$destpath\" does not exist or is inaccessible."
+		missdep=1
+	fi
+	if [[ ! -d $destpath/logs ]]; then
+		echo -e "[${YELLOW}/${NC}] Log directory does not exist... creating directory at \"$destpath/logs\""
+		mkdir $destpath/logs
+	fi
 	if [[ $missdep == 1 ]]; then
 		echo -en "[${RED}-${NC}] "
 		read -p "Dependencies missing... press any key to continue or ctrl+c to exit."
 	fi
+
 }
 
 #Run a for loop on the streamers array so we can use multiple names to record.
@@ -77,12 +85,16 @@ fnStart(){
 
 #Check to see if the config file exists. If there are issues with it, the fnRequestTwitch will delete it and start over.
 fnConfig(){
+	if [[ ! -d $destpath ]]; then
+		echo -e "[${RED}-${NC}] Destination path does not exist or is inaccessible."
+		exit
+	fi
 	if [[ ! -d $destpath/$streamer ]]; then
 		mkdir $destpath/$streamer
 	fi
 	if [[ $twitch == 1 ]]; then
 		if [[ ! -f $authorizationfile ]]; then
-			echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Twitch:${NC} Config file with authorization credentials missing!" |  tee -a $destpath/log.txt
+			echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Twitch:${NC} Config file with authorization credentials missing!" |  tee -a $destpath/logs/log.txt
 			touch $authorizationfile
 			echo "clientid=" >> $authorizationfile
 			echo "clientsecret=" >> $authorizationfile
@@ -102,7 +114,7 @@ fnConfig(){
 		if [[ $request == "true" ]]; then
 			fnRequestKick
 		else
-			echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Kick:${NC} Unable to make API connection to Kick... falling back to legacy recording." | tee -a $destpath/log.txt
+			echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Kick:${NC} Unable to make API connection to Kick... falling back to legacy recording." | tee -a $destpath/logs/log.txt
 			kickapi=0
 			fnKickRecordLegacy
 		fi
@@ -118,9 +130,9 @@ fnAccessToken(){
 		access_token=$(curl -s -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials&client_id=$clientid&client_secret=$clientsecret" https://id.twitch.tv/oauth2/token | jq -r '.access_token')
 		if [[ $(echo $access_token | wc -c) == 31 ]]; then
 			echo "access_token=$access_token" > $configfile
-			echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}Twitch:${NC} Pulled new access token!" | tee -a $destpath/log.txt
+			echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}Twitch:${NC} Pulled new access token!" | tee -a $destpath/logs/log.txt
 		else
-			echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Twitch:${NC} Error pulling new access token. Check your API credentials! Token response: $access_token" | tee -a $destpath/log.txt
+			echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Twitch:${NC} Error pulling new access token. Check your API credentials! Token response: $access_token" | tee -a $destpath/logs/log.txt
 		fi
 	fi
 }
@@ -153,7 +165,7 @@ fnRequestTwitch(){
 fnRequestKick(){
 	request=$($curlimp -s "https://kick.com/api/v2/channels/$streamer")
 	if [[ ! $(echo $request | grep "user_id" ) ]]; then
-		echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Kick:${NC} ${BLUE}$streamer${NC}: Something happened to your streamer... they don't exist or the site is blocking your requests.  Falling back to legacy recording to see if they're live." | tee -a $destpath/log.txt
+		echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Kick:${NC} ${BLUE}$streamer${NC}: Something happened to your streamer... they don't exist or the site is blocking your requests.  Falling back to legacy recording to see if they're live." | tee -a $destpath/logs/log.txt
 		fnKickRecordLegacy
 	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && $(echo $request | jq -r '.livestream.is_live') == "true" ]] && [[ " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " || $monitorkickgame == 0 ]]; then
 		#If we aren't already recording, and the game they're playing matches what we want to record, then start recording.
@@ -176,32 +188,41 @@ fnStartTwitchRecord(){
 	# Creates an output name of "streamer_S(two digit year)E(julian date)_stream title_[streamid]"
 	outputname=$(echo $request | jq -j --arg jdate $(date +"%j") --arg ydate $(date +"%y") --arg random $RANDOM '.data[].user_login," - S",$ydate,"E",$jdate," - ",.data[].title," [",.data[].id + $random,"]"' | tr -dc '[:print:]' | tr -d '<>:"/\\|?*' | tr -s " ")
 	if [[ $logging = 1 ]]; then
-		echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}Twitch:${NC} Starting recording of ${BLUE}$streamer${NC} playing ${GREEN}$(echo $request | jq -r '.data[]?.game_name // null')${NC}. File name: ${YELLOW}$outputname.mp4${NC}" | tee -a $destpath/log.txt
+		echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}Twitch:${NC} Starting recording of ${BLUE}$streamer${NC} playing ${GREEN}$(echo $request | jq -r '.data[]?.game_name // null')${NC}. File name: ${YELLOW}$outputname.mp4${NC}" | tee -a $destpath/logs/log.txt
+		screen -dmS $streamer -L -Logfile "$destpath/logs/$outputname.txt" bash -c "streamlink --stdout https://www.twitch.tv/$streamer best | ffmpeg -i - -c copy \"$destpath/$streamer/$outputname.mp4\""
+	else
+		screen -dmS $streamer bash -c "streamlink --stdout https://www.twitch.tv/$streamer best | ffmpeg -i - -c copy \"$destpath/$streamer/$outputname.mp4\""
 	fi
-	screen -dmS $streamer bash -c "streamlink --stdout https://www.twitch.tv/$streamer best | ffmpeg -i - -c copy \"$destpath/$streamer/$outputname.mp4\""
 }
 
 fnStartKickRecord(){
 	# Creates an output name of "streamer_S(two digit year)E(julian date)_stream title_[streamid]"
 	outputname=$(echo $request | jq -j --arg jdate $(date +"%j") --arg ydate $(date +"%y") --arg random $RANDOM '.user.username," - S",$ydate,"E",$jdate," - ",.livestream.session_title," [",(.livestream.id|tostring) + $random,"]"' | tr -dc '[:print:]' | tr -d '<>:"/\\|?*' | tr -s " " )
         if [[ $logging = 1 ]]; then
-		echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}Kick:${NC} Starting recording of ${BLUE}$streamer${NC} playing ${GREEN}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC}. File name: ${YELLOW}$outputname.mp4${NC}" | tee -a $destpath/log.txt	
+		echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}Kick:${NC} Starting recording of ${BLUE}$streamer${NC} playing ${GREEN}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC}. File name: ${YELLOW}$outputname.mp4${NC}" | tee -a $destpath/logs/log.txt
+		screen -dmS $streamer -L -Logfile "$destpath/logs/$outputname.txt" bash -c "streamlink --stdout https://www.kick.com/$streamer best | ffmpeg -i - -c copy \"$destpath/$streamer/$outputname.mp4\""
+	else
+		screen -dmS $streamer bash -c "streamlink --stdout https://www.kick.com/$streamer best | ffmpeg -i - -c copy \"$destpath/$streamer/$outputname.mp4\""
 	fi
-	screen -dmS $streamer bash -c "streamlink --stdout https://www.kick.com/$streamer best | ffmpeg -i - -c copy \"$destpath/$streamer/$outputname.mp4\""
 }
 
 fnKickRecordLegacy(){
 	# We're basically skipping all checks of if someone is online or not and just brute forcing trying to record.  If they're not online it'll just error out.
+	outputname="$streamer - S$(date +"%y")E$(date +"%j") - $RANDOM"
 	if [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) ]]; then
 		echo -e "[${YELLOW}/${NC}] ${YELLOW}Kick:${NC} Legacy Mode - ${BLUE}$streamer${NC}"
-		screen -dmS $streamer bash -c "streamlink --output \"$destpath/{author}/{title} {id}.mp4\" https://www.kick.com/$streamer best"
+		if [[ $logging = 1 ]]; then
+			screen -dmS $streamer -L -Logfile "$destpath/logs/$outputname.txt" bash -c "streamlink --output \"$destpath/{author}/{title} {id}.mp4\" https://www.kick.com/$streamer best"
+		else
+			screen -dmS $streamer bash -c "streamlink --output \"$destpath/{author}/{title} {id}.mp4\" https://www.kick.com/$streamer best"
+		fi
 	fi
 }
 
 fnStopRecord(){
 	#This sends a ctrl+c (SIGINT) to the screen to gracefully stop the recording.
         if [[ $logging = 1 ]]; then
-		echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - Stopping recording of ${BLUE}$streamer${NC}. ${RED}$stopgame${NC} not in ${GREEN}${game[@]}${NC}." | tee -a $destpath/log.txt
+		echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - Stopping recording of ${BLUE}$streamer${NC}. ${RED}$stopgame${NC} not in ${GREEN}${game[@]}${NC}." | tee -a $destpath/logs/log.txt
 	fi
 	screen -S $streamer -X stuff $'\003'
 }
