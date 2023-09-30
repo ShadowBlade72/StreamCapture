@@ -60,7 +60,6 @@ fnDependencyCheck(){
 		echo -en "[${RED}-${NC}] "
 		read -p "Dependencies missing... press any key to continue or ctrl+c to exit."
 	fi
-
 }
 
 #Run a for loop on the streamers array so we can use multiple names to record.
@@ -85,10 +84,6 @@ fnStart(){
 
 #Check to see if the config file exists. If there are issues with it, the fnRequestTwitch will delete it and start over.
 fnConfig(){
-	if [[ ! -d $destpath ]]; then
-		echo -e "[${RED}-${NC}] Destination path does not exist or is inaccessible."
-		exit
-	fi
 	if [[ ! -d $destpath/$streamer ]]; then
 		mkdir $destpath/$streamer
 	fi
