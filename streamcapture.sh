@@ -98,7 +98,14 @@ fnConfig(){
 		fi
 	fi
 	if [[ $kick == 1 && $kickapi == 1 ]]; then
-		fnRequestKick
+		request=$($curlimp -s "https://kick.com/kick-token-provider" | jq -r '.enabled')
+		if [[ $request == "true" ]]; then
+			fnRequestKick
+		else
+			echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Kick:${NC} Unable to make API connection to Kick... falling back to legacy recording." | tee -a $destpath/log.txt
+			kickapi=0
+			fnKickRecordLegacy
+		fi
 	elif [[ $kick == 1 ]]; then
 		fnKickRecordLegacy
 	fi
@@ -186,6 +193,7 @@ fnStartKickRecord(){
 fnKickRecordLegacy(){
 	# We're basically skipping all checks of if someone is online or not and just brute forcing trying to record.  If they're not online it'll just error out.
 	if [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) ]]; then
+		echo -e "[${YELLOW}/${NC}] ${YELLOW}Kick:${NC} Legacy Mode - ${BLUE}$streamer${NC}"
 		screen -dmS $streamer bash -c "streamlink --output \"$destpath/{author}/{title} {id}.mp4\" https://www.kick.com/$streamer best"
 	fi
 }
