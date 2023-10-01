@@ -21,10 +21,11 @@ configfile="/root/Mango/.twitchrecord.conf"
 
 # Do we want to use the kick "API".  If so, we need curl-impersonate. Otherwise fall back to legacy mode. Having this enabled allows better episode naming.
 kickapi=1
-curlimp="/opt/curl-impersonate/curl_chrome110"
+curlimp="/opt/curl-impersonate/curl_ff109"
 
 # Do we want to enable logging?
 logging=1
+debug=0
 
 ######CONFIGURATION######
 
@@ -206,7 +207,7 @@ fnKickRecordLegacy(){
 	outputname="$streamer - S$(date +"%y")E$(date +"%j") - $RANDOM"
 	if [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) ]]; then
 		echo -e "[${YELLOW}/${NC}] ${YELLOW}Kick:${NC} Legacy Mode - ${BLUE}$streamer${NC}"
-		if [[ $logging = 1 ]]; then
+		if [[ $debug = 1 ]]; then
 			screen -dmS $streamer -L -Logfile "$destpath/logs/$outputname.txt" bash -c "streamlink --output \"$destpath/{author}/{title} {id}.mp4\" https://www.kick.com/$streamer best"
 		else
 			screen -dmS $streamer bash -c "streamlink --output \"$destpath/{author}/{title} {id}.mp4\" https://www.kick.com/$streamer best"
