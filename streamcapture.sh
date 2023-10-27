@@ -3,7 +3,7 @@
 
 #Enter your streamers seperated by spaces.  If they have a space in their name, use quotes around their name.
 twitchstreamers=(crazymango_vr aeriytheneko isthisrealvr Vrey blu_haze Ikumi)
-kickstreamers=(CrazyMangoVR blu-haze VreyVrey MikaMoonlight roflgator)
+kickstreamers=(CrazyMangoVR blu-haze VreyVrey MikaMoonlight roflgator testy)
 
 #Enter a list of games you want to monitor the streamers for seperated by spaces.  If there is a space in the name, use quotes around the name.
 monitortwitchgame=1
@@ -168,19 +168,21 @@ fnRequestTwitch(){
 
 fnRequestKick(){
 	request=$($curlimp -s "https://kick.com/api/v2/channels/$streamer")
-	if [[ ! $(echo $request | grep "user_id" ) ]]; then
+	if [[ ! $(echo $request | grep "user_id" ) && -z $(streamlink --stream-url "https://kick.com/$streamer" | grep error) ]]; then
 		if [[ $logging -ge 2 ]]; then
 			echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Kick:${NC} ${BLUE}$streamer${NC}: Something happened to your streamer... they don't exist or the site is blocking your requests.  Falling back to legacy recording to see if they're live." | tee -a $destpath/logs/errlog.txt
 		fi
 		fnKickRecordLegacy
-	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && $(echo $request | jq -r '.livestream.is_live') == "true" ]] && [[ " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " || $monitorkickgame == 0 ]]; then
+	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && -z $(screen -list | grep $streamer) && $(echo $request | jq -r '.livestream.is_live') == "true" && -z $(streamlink --stream-url "https://kick.com/$streamer" | grep error) ]] && [[ " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " || $monitorkickgame == 0 ]]; then
 		#If we aren't already recording, and the game they're playing matches what we want to record, then start recording.
 		fnStartKickRecord
-	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && $(echo $request | jq -r '.livestream.is_live') == "true" && ! " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " && $stopkickrecord == 1 && $monitorkickgame == 1 ]]; then
+	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && -z $(screen -list | grep $streamer) && $(echo $request | jq -r '.livestream.is_live') == "true" ]] && [[ " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " || $monitorkickgame == 0 ]]; then
+		fnKickRecordFailback
+	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && -n $(screen -list | grep $streamer) && $(echo $request | jq -r '.livestream.is_live') == "true" && ! " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " && $stopkickrecord == 1 && $monitorkickgame == 1 ]]; then
 		#If they change game and we have stop recording set, then stop recording.
 		stopgame=$(echo $request | jq -r '.livestream.categories[]?.name // null')
 		fnStopRecord
-	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) ]]; then
+	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) || -n $(screen -list | grep $streamer) ]]; then
 		echo -e "[${GREEN}+${NC}] ${GREEN}Kick:${NC} ${BLUE}$streamer${NC} is live in ${YELLOW}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC} and we're already recording."
 	elif [[ $(echo $request | jq -r '.livestream.is_live') == "true" ]]; then
 		echo -e "[${YELLOW}/${NC}] ${YELLOW}Kick:${NC} ${BLUE}$streamer${NC} is live in ${RED}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC} which is not in ${YELLOW}${game[@]}${NC}."
@@ -210,11 +212,28 @@ fnStartKickRecord(){
 		echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}Kick:${NC} Starting recording of ${BLUE}$streamer${NC} playing ${GREEN}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC}. File name: ${YELLOW}$outputname.mp4${NC}" | tee -a $destpath/logs/log.txt
 	fi
         if [[ $debug -ge 1 ]]; then
-		screen -dmS $streamer -L -Logfile "$destpath/logs/$outputname.txt" bash -c "streamlink --stdout https://www.kick.com/$streamer best | ffmpeg -i - -c copy \"$destpath/$streamer/$outputname.mp4\""
+		screen -dmS $streamer -L -Logfile "$destpath/logs/$outputname.txt" bash -c "streamlink --stdout https://www.kick.com/$streamer best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
 	else
-		screen -dmS $streamer bash -c "streamlink --stdout https://www.kick.com/$streamer best | ffmpeg -i - -c copy \"$destpath/$streamer/$outputname.mp4\""
+		screen -dmS $streamer bash -c "streamlink --stdout https://www.kick.com/$streamer best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
 	fi
 }
+
+fnKickRecordFailback(){
+	# This is for when CloudScraper fails miserably and we hope to catch it here.
+	outputname=$(echo $request | jq -j --arg jdate $(date +"%j") --arg ydate $(date +"%y") --arg random $RANDOM '.user.username," - S",$ydate,"E",$jdate," - ",.livestream.session_title," [",(.livestream.id|tostring) + $random,"]"' | tr -dc '[:print:]' | tr -d '<>:"/\\|?*' | tr -s " " )
+	playbackurl=$(echo $request | jq -r .playback_url)
+	if [[ -n $playbackurl && "$playbackurl" == *".m3u8"* ]]; then
+        	if [[ $logging -ge 1 ]]; then
+        		echo -e "[${RED}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}Kick:${NC} Starting recording of ${BLUE}$streamer${NC} playing ${GREEN}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC}. File name: ${YELLOW}$outputname.mp4${NC}" | tee -a $destpath/logs/log.txt
+        	fi
+        	if [[ $debug -ge 1 ]]; then
+                	screen -dmS $streamer -L -Logfile "$destpath/logs/$outputname.txt" bash -c "streamlink --stdout $playbackurl best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
+        	else
+                	screen -dmS $streamer bash -c "streamlink --stdout $playbackurl best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
+        	fi
+	fi
+}
+
 
 fnKickRecordLegacy(){
 	# We're basically skipping all checks of if someone is online or not and just brute forcing trying to record.  If they're not online it'll just error out.
