@@ -76,6 +76,7 @@ fnStart(){
 		echo -e "[${GREEN}---${NC}] Kick: [${GREEN}---${NC}]"
 		for streamer in "${kickstreamers[@]}"; do
 			unset twitch
+			retry=0
 			kick=1
 			fnConfig
 		done
@@ -161,6 +162,10 @@ fnRequestKick(){
                 request=$($curlimp -s "https://kick.com/api/v2/channels/$streamer")
                 ((retry++))
                 sleep 1
+		if [[ $request =~ "Just a moment..." && $retry -eq 5 ]]; then
+			echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Kick:${NC} ${BLUE}$streamer${NC}: Got CloudFlare response we're unable to bypass..." | tee -a $destpath/logs/errlog.txt
+			return
+		fi
         done
 	if [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && -z $(screen -list | grep $streamer) && $(echo $request | jq -r '.livestream.is_live') == "true" && -z $(streamlink --stream-url "https://kick.com/$streamer" | grep error) ]] && [[ " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " || $monitorkickgame == 0 ]]; then
 		#If we aren't already recording, and the game they're playing matches what we want to record, then start recording.
