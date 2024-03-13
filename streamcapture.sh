@@ -3,7 +3,7 @@
 
 #Enter your streamers seperated by spaces.  If they have a space in their name, use quotes around their name.
 twitchstreamers=(crazymango_vr aeriytheneko isthisrealvr Vrey blu_haze Ikumi MikaMoonlight KittyfluteVT)
-kickstreamers=(CrazyMangoVR blu-haze VreyVrey MikaMoonlight roflgator Nebride)
+kickstreamers=(CrazyMangoVR blu-haze VreyVrey MikaMoonlight roflgator mementosmori)
 
 #Enter a list of games you want to monitor the streamers for seperated by spaces.  If there is a space in the name, use quotes around the name.
 monitortwitchgame=1
@@ -20,7 +20,7 @@ authorizationfile="/root/Mango/.twitchcreds.conf"
 configfile="/root/Mango/.twitchrecord.conf"
 
 # We need curl-impersonate. Otherwise we fall back to legacy mode which is not ideal. Having this allows better episode naming.
-curlimp="/opt/curl-impersonate/curl_ff109"
+curlimp="/opt/curl-impersonate/curl_chrome116"
 
 # Do we want to enable logging?
 logging=2 #Start/Stop/Errors/etc -- 0 = No Logging -- 1 = Standard Logging -- 2 = +Error Logging
@@ -156,6 +156,12 @@ fnRequestTwitch(){
 
 fnRequestKick(){
 	request=$($curlimp -s "https://kick.com/api/v2/channels/$streamer")
+        while [[ $request =~ "Just a moment..." && $retry -le 5 ]]; do
+                echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Kick:${NC} ${BLUE}$streamer${NC}: Got CloudFlare response... trying again... $retry."
+                request=$($curlimp -s "https://kick.com/api/v2/channels/$streamer")
+                ((retry++))
+                sleep 1
+        done
 	if [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && -z $(screen -list | grep $streamer) && $(echo $request | jq -r '.livestream.is_live') == "true" && -z $(streamlink --stream-url "https://kick.com/$streamer" | grep error) ]] && [[ " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " || $monitorkickgame == 0 ]]; then
 		#If we aren't already recording, and the game they're playing matches what we want to record, then start recording.
 		fnStartKickRecord
