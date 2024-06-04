@@ -2,13 +2,13 @@
 ######CONFIGURATION######
 
 #Enter your streamers seperated by spaces.  If they have a space in their name, use quotes around their name.
-twitchstreamers=(crazymango_vr aeriytheneko isthisrealvr Vrey blu_haze Ikumi MikaMoonlight KittyfluteVT)
-kickstreamers=(CrazyMangoVR blu-haze VreyVrey MikaMoonlight roflgator mementosmori)
+twitchstreamers=(crazymango_vr aeriytheneko isthisrealvr Vrey blu_haze Ikumi MikaMoonlight KittyfluteVT NoodleWolfVT CozyGoober)
+kickstreamers=(CrazyMangoVR blu-haze VreyVrey MikaMoonlight roflgator mementosmori KittyfluteVT)
 
 #Enter a list of games you want to monitor the streamers for seperated by spaces.  If there is a space in the name, use quotes around the name.
 monitortwitchgame=1
 monitorkickgame=0
-game=(VRChat ASMR)
+game=(VRChat ASMR "Pools, Hot Tubs, and Beaches")
 
 #Do you want to stop recording if your streamer switches games?
 stoptwitchrecord=1
@@ -144,6 +144,7 @@ fnRequestTwitch(){
 	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.twitch.tv/$streamer" | grep streamlink) && $(echo $request | jq -r '.data[].type') == "live" && ! " ${game[@]} " =~ " $(echo $request | jq -r '.data[]?.game_name // null') " && $stoptwitchrecord == 1 && $monitortwitchgame == 1 ]]; then
 		#If they change game and we have stop recording set, then stop recording.
 		stopgame=$(echo $request | jq -r '.data[]?.game_name // null')
+		service=Twitch
 		fnStopRecord
 	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.twitch.tv/$streamer" | grep streamlink) ]]; then
 		echo -e "[${GREEN}+${NC}] ${GREEN}Twitch:${NC} ${BLUE}$streamer${NC} is live in ${YELLOW}$(echo $request | jq -r '.data[]?.game_name // null')${NC} and we're already recording."
@@ -167,10 +168,10 @@ fnRequestKick(){
 			return
 		fi
         done
-	if [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && -z $(screen -list | grep $streamer) && $(echo $request | jq -r '.livestream.is_live') == "true" && -z $(streamlink --stream-url "https://kick.com/$streamer" | grep error) ]] && [[ " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " || $monitorkickgame == 0 ]]; then
+	if [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && -z $(screen -list | grep $streamer-Kick) && $(echo $request | jq -r '.livestream.is_live') == "true" && -z $(streamlink --stream-url "https://kick.com/$streamer" | grep error) ]] && [[ " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " || $monitorkickgame == 0 ]]; then
 		#If we aren't already recording, and the game they're playing matches what we want to record, then start recording.
 		fnStartKickRecord
-	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && -z $(screen -list | grep $streamer) && $(echo $request | jq -r '.livestream.is_live') == "true" ]] && [[ " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " || $monitorkickgame == 0 ]]; then
+	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && -z $(screen -list | grep $streamer-Kick) && $(echo $request | jq -r '.livestream.is_live') == "true" ]] && [[ " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " || $monitorkickgame == 0 ]]; then
 		#If cloudscraper has failed, but we know they're live, we're going to try a fallback method.
 		fnKickRecordFailback
 	elif [[ ! $(echo $request | grep "user_id" ) && -z $(streamlink --stream-url "https://kick.com/$streamer" | grep error) ]]; then
@@ -179,11 +180,12 @@ fnRequestKick(){
                 fi
 		#If everything else has failed, we'll give it one final go to see if we can catch it. Ideally we should never get to here, but it's possible.
                 fnKickRecordLegacy
-	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && -n $(screen -list | grep $streamer) && $(echo $request | jq -r '.livestream.is_live') == "true" && ! " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " && $stopkickrecord == 1 && $monitorkickgame == 1 ]]; then
+	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && -n $(screen -list | grep $streamer-Kick) && $(echo $request | jq -r '.livestream.is_live') == "true" && ! " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " && $stopkickrecord == 1 && $monitorkickgame == 1 ]]; then
 		#If they change game and we have stop recording set, then stop recording.
 		stopgame=$(echo $request | jq -r '.livestream.categories[]?.name // null')
+		service=Kick
 		fnStopRecord
-	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) || -n $(screen -list | grep $streamer) ]]; then
+	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) || -n $(screen -list | grep $streamer-Kick) ]]; then
 		echo -e "[${GREEN}+${NC}] ${GREEN}Kick:${NC} ${BLUE}$streamer${NC} is live in ${YELLOW}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC} and we're already recording."
 	elif [[ $(echo $request | jq -r '.livestream.is_live') == "true" ]]; then
 		echo -e "[${YELLOW}/${NC}] ${YELLOW}Kick:${NC} ${BLUE}$streamer${NC} is live in ${RED}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC} which is not in ${YELLOW}${game[@]}${NC}."
@@ -200,9 +202,9 @@ fnStartTwitchRecord(){
 		echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}Twitch:${NC} Starting recording of ${BLUE}$streamer${NC} playing ${GREEN}$(echo $request | jq -r '.data[]?.game_name // null')${NC}. File name: ${YELLOW}$outputname.mp4${NC}" | tee -a $destpath/logs/log.txt
 	fi
 	if [[ $debug -ge 1 ]]; then
-		screen -dmS $streamer -L -Logfile "$destpath/logs/$outputname.txt" bash -c "streamlink --stdout https://www.twitch.tv/$streamer best | ffmpeg -i - -c copy \"$destpath/$streamer/$outputname.mp4\""
+		screen -dmS $streamer-Twitch -L -Logfile "$destpath/logs/$outputname.txt" bash -c "streamlink --stdout https://www.twitch.tv/$streamer best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
 	else
-		screen -dmS $streamer bash -c "streamlink --stdout https://www.twitch.tv/$streamer best | ffmpeg -i - -c copy \"$destpath/$streamer/$outputname.mp4\""
+		screen -dmS $streamer-Twitch bash -c "streamlink --stdout https://www.twitch.tv/$streamer best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
 	fi
 }
 
@@ -213,9 +215,9 @@ fnStartKickRecord(){
 		echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}Kick:${NC} Starting recording of ${BLUE}$streamer${NC} playing ${GREEN}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC}. File name: ${YELLOW}$outputname.mp4${NC}" | tee -a $destpath/logs/log.txt
 	fi
         if [[ $debug -ge 1 ]]; then
-		screen -dmS $streamer -L -Logfile "$destpath/logs/$outputname.txt" bash -c "streamlink --stdout https://www.kick.com/$streamer best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
+		screen -dmS $streamer-Kick -L -Logfile "$destpath/logs/$outputname.txt" bash -c "streamlink --stdout https://www.kick.com/$streamer best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
 	else
-		screen -dmS $streamer bash -c "streamlink --stdout https://www.kick.com/$streamer best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
+		screen -dmS $streamer-Kick bash -c "streamlink --stdout https://www.kick.com/$streamer best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
 	fi
 }
 
@@ -228,9 +230,9 @@ fnKickRecordFailback(){
         		echo -e "[${RED}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}Kick:${NC} Starting recording of ${BLUE}$streamer${NC} playing ${GREEN}$(echo $request | jq -r '.livestream.categories[]?.name // null')${NC}. File name: ${YELLOW}$outputname.mp4${NC}" | tee -a $destpath/logs/log.txt
         	fi
         	if [[ $debug -ge 1 ]]; then
-                	screen -dmS $streamer -L -Logfile "$destpath/logs/$outputname.txt" bash -c "streamlink --stdout $playbackurl best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
+                	screen -dmS $streamer-Kick -L -Logfile "$destpath/logs/$outputname.txt" bash -c "streamlink --stdout $playbackurl best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
         	else
-                	screen -dmS $streamer bash -c "streamlink --stdout $playbackurl best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
+                	screen -dmS $streamer-Kick bash -c "streamlink --stdout $playbackurl best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
         	fi
 	fi
 }
@@ -241,9 +243,9 @@ fnKickRecordLegacy(){
 	if [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) ]]; then
 		echo -e "[${YELLOW}/${NC}] ${YELLOW}Kick:${NC} Legacy Mode - ${BLUE}$streamer${NC}"
 		if [[ $debug -ge 2 ]]; then
-			screen -dmS $streamer -L -Logfile "$destpath/logs/$outputname.txt" bash -c "streamlink --output \"$destpath/{author}/{author} - {title} {id}.mp4\" https://www.kick.com/$streamer best"
+			screen -dmS $streamer-Kick -L -Logfile "$destpath/logs/$outputname.txt" bash -c "streamlink --output \"$destpath/{author}/{author} - {title} {id}.mp4\" https://www.kick.com/$streamer best"
 		else
-			screen -dmS $streamer bash -c "streamlink --output \"$destpath/{author}/{author} - {title} {id}.mp4\" https://www.kick.com/$streamer best"
+			screen -dmS $streamer-Kick bash -c "streamlink --output \"$destpath/{author}/{author} - {title} {id}.mp4\" https://www.kick.com/$streamer best"
 		fi
 	fi
 }
@@ -253,7 +255,7 @@ fnStopRecord(){
         if [[ $logging -ge 1 ]]; then
 		echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - Stopping recording of ${BLUE}$streamer${NC}. ${RED}$stopgame${NC} not in ${GREEN}${game[@]}${NC}." | tee -a $destpath/logs/log.txt
 	fi
-	screen -S $streamer -X stuff $'\003'
+	screen -S $streamer-$service -X stuff $'\003'
 }
 
 fnDependencyCheck
