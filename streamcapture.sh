@@ -91,6 +91,9 @@ fnConfig(){
 	if [[ $twitch == 1 ]]; then
 		service=Twitch
 		if [[ -z $(screen -list | grep $streamer-$service) && -f $destpath/logs/$streamer-$service.lock ]]; then
+			if [[ $logging -ge 2 ]]; then
+        	        	echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}$service:${NC} Unlocking ${BLUE}$streamer${NC}." | tee -a $destpath/logs/log.txt
+		        fi
                 	rm "$destpath/logs/$streamer-$service.lock"
         	fi
 		if [[ ! -f $authorizationfile ]]; then
@@ -114,6 +117,10 @@ fnConfig(){
 	if [[ $kick == 1 ]]; then
 		service=Kick
 		if [[ -z $(screen -list | grep $streamer-$service) && -f $destpath/logs/$streamer-$service.lock ]]; then
+		        if [[ $logging -ge 2 ]]; then
+		                echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}$service:${NC} Unlocking ${BLUE}$streamer${NC}." | tee -a $destpath/logs/log.txt
+                        fi
+
                         rm "$destpath/logs/$streamer-$service.lock"
                 fi
 		fnRequestKick
@@ -258,12 +265,19 @@ fnKickRecordLegacy(){
 
 fnStopRecord(){
 	#This sends a ctrl+c (SIGINT) to the screen to gracefully stop the recording.
-        if [[ $logging -ge 1 ]]; then
-		echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${GREEN}$service:${NC} Stopping recording of ${BLUE}$streamer${NC}. ${RED}$stopgame${NC} not in ${GREEN}${game[@]}${NC}." | tee -a $destpath/logs/log.txt
-	fi
 	if [[ ! -f $destpath/logs/$streamer-$service.lock ]]; then
+                if [[ $logging -ge 2 ]]; then
+                        echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}$service:${NC} Locking ${BLUE}$streamer${NC}." | tee -a $destpath/logs/log.txt
+                fi
+	        if [[ $logging -ge 1 ]]; then
+          	      echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${GREEN}$service:${NC} Stopping recording of ${BLUE}$streamer${NC}. ${RED}$stopgame${NC} not in ${GREEN}${game[@]}${NC}." | tee -a $destpath/logs/log.txt
+        	fi
 		touch "$destpath/logs/$streamer-$service.lock"
 		screen -S $streamer-$service -X stuff $'\003'
+	else
+                if [[ $logging -ge 2 ]]; then
+			echo -e "[${YELLOW}/${NC}] ${BLUE}$(date)${NC} - ${GREEN}$service:${NC} ${YELLOW}Locked${NC}: Waiting for processing to finish for ${BLUE}$streamer${NC}." | tee -a $destpath/logs/log.txt
+                fi
 	fi
 }
 
