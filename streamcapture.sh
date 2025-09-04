@@ -2,7 +2,7 @@
 ######CONFIGURATION######
 
 #Enter your streamers seperated by spaces.  If they have a space in their name, use quotes around their name.
-twitchstreamers=(isthisrealvr Vrey Ikumi Ebiko sevy Miyunie__ MiruneMochi shiasvt)
+twitchstreamers=(isthisrealvr Vrey Ikumi Ebiko sevy Miyunie__ MiruneMochi)
 kickstreamers=(blu-haze VreyVrey MikaMoonlight roflgator KittyfluteVT itskxtlyn momocita)
 
 #Enter a list of games you want to monitor the streamers for seperated by spaces.  If there is a space in the name, use quotes around the name.
@@ -43,11 +43,19 @@ fnDependencyCheck(){
 	if [[ ! -f $(which jq) ]]; then
 		echo -e "[${RED}-${NC}] ${BLUE}jq${NC} not found!"
                 missdep=1
-        fi
-	if [[ $(streamlink --can-handle-url https://www.kick.com/test) && $? == 1 ]]; then
+    fi
+	if [[ ! -f $(which screen) ]]; then
+		echo -e "[${RED}-${NC}] ${BLUE}screen${NC} not found!"
+		missdep=1
+	fi
+	if [[ ! -f $(which ffmpeg) ]]; then
+		echo -e "[${RED}-${NC}] ${BLUE}ffmpeg${NC} not found!"
+		missdep=1
+    fi
+	if [[ $(streamlink --can-handle-url https://www.kick.com/test) && ! $? == 0 ]]; then
 	        echo -e "[${RED}-${NC}] streamlink ${BLUE}kick plugin${NC} not found!"
         	missdep=1
-        fi
+	fi
 	if [[ ! -d $destpath ]]; then
 		echo -e "[${RED}-${NC}] Destination path \"$destpath\" does not exist or is inaccessible."
 		missdep=1
@@ -129,6 +137,13 @@ fnConfig(){
 
 #Request a new access token if the one from the config file can't be loaded or is expired.
 fnAccessToken(){
+	if [[ $(echo $request | jq -r .message) == "Malformed query params." ]]; then
+		if [[ $logging -ge 2 ]]; then
+				echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Twitch:${NC} Streamer does not exist or another error has occured: $streamer" | tee -a $destpath/logs/errlog.txt
+				echo $request
+				return
+		fi
+	fi
 	if [[ -z $request || $(echo $request | jq -r '.error') != "null" || -z $access_token ]]; then
 		#This is doing the oauth authentication and saving the bearer token that we receive to the config file.
 		access_token=$(curl -s -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials&client_id=$clientid&client_secret=$clientsecret" https://id.twitch.tv/oauth2/token | jq -r '.access_token')
@@ -148,6 +163,13 @@ fnAccessToken(){
 #Make a request to the Twitch API for the streamers information.
 fnRequestTwitch(){
 	request=$(curl -s -H "Client-Id: $clientid" -H "Authorization: Bearer $access_token" -X GET "https://api.twitch.tv/helix/streams?user_login=$streamer")
+	if [[ $(echo $request | jq -r .message) == "Malformed query params." ]]; then
+		if [[ $logging -ge 2 ]]; then
+				echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Twitch:${NC} Streamer does not exist or another error has occured: $streamer" | tee -a $destpath/logs/errlog.txt
+				echo $request
+				return
+		fi
+	fi
 	if [[ $(echo $request | jq -r '.error') != "null" || -z $access_token ]]; then
 		#echo "Token Error: $(echo $request | jq -r '.error') ---- $access_token"
 		unset access_token
