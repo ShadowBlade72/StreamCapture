@@ -2,17 +2,17 @@
 ######CONFIGURATION######
 
 #Enter your streamers seperated by spaces.  If they have a space in their name, use quotes around their name.
-twitchstreamers=(crazymango_vr aeriytheneko isthisrealvr Vrey blu_haze Ikumi MikaMoonlight KittyfluteVT NoodleWolfVT CozyGoober Ebiko)
-kickstreamers=(CrazyMangoVR blu-haze VreyVrey MikaMoonlight roflgator mementosmori KittyfluteVT)
+twitchstreamers=(isthisrealvr Vrey Ikumi Ebiko sevy Miyunie__ MiruneMochi shiasvt)
+kickstreamers=(blu-haze VreyVrey MikaMoonlight roflgator KittyfluteVT itskxtlyn momocita)
 
 #Enter a list of games you want to monitor the streamers for seperated by spaces.  If there is a space in the name, use quotes around the name.
 monitortwitchgame=1
-monitorkickgame=0
-game=(VRChat ASMR "Pools, Hot Tubs, and Beaches")
+monitorkickgame=1
+game=(VRChat ASMR)
 
 #Do you want to stop recording if your streamer switches games?
 stoptwitchrecord=1
-stopkickrecord=0
+stopkickrecord=1
 
 #Destination path is where you'll save the recordings.  The authorization file is for your Twitch API credentials, and the configfile is where it'll save your bearer token once it authenticates.
 destpath="/Drobo/Hareis"
