@@ -7,6 +7,10 @@ This script is setup to only record a stream if the streamer is playing the iden
 ## Requirements
 You'll need the following packages to get this working.
 
+- screen
+  - `apt install screen`
+- ffmpeg
+  - `apt install ffmpeg`
 - pipx
   - pipx is used to keep install Streamlink. Some distro's, like Ubuntu have very oudated versions if you use apt. 
   - `apt install pipx`
@@ -14,10 +18,8 @@ You'll need the following packages to get this working.
   - `pipx install jq`
 - Streamlink
   - `pipx install streamlink`
-
 - The following will add the items installed via pipx to your system PATH automatically.
   - `pipx ensurepath`
-
 - curl-impersonate
   - [https://github.com/lwthiker/curl-impersonate](https://github.com/lwthiker/curl-impersonate/releases/latest)
   - If you're on linux download the package called `curl-impersonate-vXXXX.x86_64-linux-gnu.tar.gz`
