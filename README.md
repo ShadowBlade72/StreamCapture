@@ -41,6 +41,13 @@ You'll need to register for a developer account in order to make API calls.  The
    - ` clientsecret=<CLIENTSECRET> `
 2. Update the StreamCapture script with the file name and location under the "authorizationfile=<your config file>"
 
+Now you'll need to setup StreamLink with your Twitch credentials so you can skips ads if you have Turbo or are subscribed to the streamer you're recording.
+- Run the following in your browsers console: `document.cookie.split("; ").find(item=>item.startsWith("auth-token="))?.split("=")[1]`
+  - Save the output in a file here: /home/USERNAME/.config/streamlink/config.twitch
+  - Here is what you will enter into that file. Change `abcde...` with the auth token from your browser: `twitch-api-header=Authorization=OAuth abcdefghijklmnopqrstuvwxyz0123`
+- REF: https://streamlink.github.io/cli/plugins/twitch.html
+- REF: https://streamlink.github.io/cli/config.html#plugin-specific-configuration-file
+
 ## Configuration
 
 - Enter your streamers seperated by spaces.  If they have a space in their name, use quotes around their name.
