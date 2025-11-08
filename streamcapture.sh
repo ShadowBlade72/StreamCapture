@@ -3,14 +3,16 @@
 
 #Enter your streamers seperated by spaces.  If they have a space in their name, use quotes around their name.
 twitchstreamers=(isthisrealvr Vrey Ikumi Ebiko sevy Miyunie__ MiruneMochi)
-kickstreamers=(blu-haze VreyVrey MikaMoonlight roflgator itskxtlyn momocita zayi isthisrealvr)
+kickstreamers=(blu-haze VreyVrey MikaMoonlight roflgator itskxtlyn momocita zayi isTHISrealVR)
 
 #Enter a list of games you want to monitor the streamers for seperated by spaces.  If there is a space in the name, use quotes around the name.
-monitortwitchgame=1
-monitorkickgame=1
 game=(VRChat ASMR)
 
-#Do you want to stop recording if your streamer switches games?
+#Do you only want to record if they are playing a specific game specified above? Set to 1 to enable game monitoring, or 0 to disable.
+monitortwitchgame=1
+monitorkickgame=1
+
+#Do you want to stop recording if your streamer switches to a game not specified above?
 stoptwitchrecord=1
 stopkickrecord=1
 
@@ -60,9 +62,9 @@ fnDependencyCheck(){
 		echo -e "[${RED}-${NC}] Destination path \"$destpath\" does not exist or is inaccessible."
 		missdep=1
 	fi
-	if [[ ! -d $destpath/logs ]]; then
+	if [[ -d $destpath && ! -d $destpath/logs ]]; then
 		echo -e "[${YELLOW}/${NC}] Log directory does not exist... creating directory at \"$destpath/logs\""
-		mkdir $destpath/logs
+        mkdir $destpath/logs
 	fi
 	if [[ $missdep == 1 ]]; then
 		echo -en "[${RED}-${NC}] "
@@ -128,7 +130,6 @@ fnConfig(){
 		        if [[ $logging -ge 2 ]]; then
 		                echo -e "[${GREEN}+${NC}] ${BLUE}$(date)${NC} - ${GREEN}$service:${NC} Unlocking ${BLUE}$streamer${NC}." | tee -a $destpath/logs/log.txt
                         fi
-
                         rm "$destpath/logs/$streamer-$service.lock"
                 fi
 		fnRequestKick
@@ -194,16 +195,16 @@ fnRequestTwitch(){
 
 fnRequestKick(){
 	request=$($curlimp -s "https://kick.com/api/v2/channels/$streamer")
-        while [[ $request =~ "Just a moment..." && $retry -le 5 ]]; do
-                echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Kick:${NC} ${BLUE}$streamer${NC}: Got CloudFlare response... trying again... $retry."
-                request=$($curlimp -s "https://kick.com/api/v2/channels/$streamer")
-                ((retry++))
-                sleep 1
+	while [[ $request =~ "Just a moment..." && $retry -le 5 ]]; do
+		echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Kick:${NC} ${BLUE}$streamer${NC}: Got CloudFlare response... trying again... $retry."
+		request=$($curlimp -s "https://kick.com/api/v2/channels/$streamer")
+		((retry++))
+		sleep 1
 		if [[ $request =~ "Just a moment..." && $retry -eq 5 ]]; then
 			echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Kick:${NC} ${BLUE}$streamer${NC}: Got CloudFlare response we're unable to bypass..." | tee -a $destpath/logs/errlog.txt
 			return
 		fi
-        done
+	done
 	if [[ -z $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && -z $(screen -list | grep $streamer-$service) && $(echo $request | jq -r '.livestream.is_live') == "true" && -z $(streamlink --stream-url "https://kick.com/$streamer" | grep error) ]] && [[ " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " || $monitorkickgame == 0 ]]; then
 		#If we aren't already recording, and the game they're playing matches what we want to record, then start recording.
 		fnStartKickRecord
@@ -211,11 +212,11 @@ fnRequestKick(){
 		#If cloudscraper has failed, but we know they're live, we're going to try a fallback method.
 		fnKickRecordFailback
 	elif [[ ! $(echo $request | grep "user_id" ) && -z $(streamlink --stream-url "https://kick.com/$streamer" | grep error) ]]; then
-                if [[ $logging -ge 2 ]]; then
-                        echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Kick:${NC} ${BLUE}$streamer${NC}: Something happened to your streamer... they don't exist or the site is blocking your requests.  Falling back to legacy recording to see if they're live." | tee -a $destpath/logs/errlog.txt
-                fi
+		if [[ $logging -ge 2 ]]; then
+				echo -e "[${RED}-${NC}] ${BLUE}$(date)${NC} - ${RED}Kick:${NC} ${BLUE}$streamer${NC}: Something happened to your streamer... they don't exist or the site is blocking your requests.  Falling back to legacy recording to see if they're live." | tee -a $destpath/logs/errlog.txt
+		fi
 		#If everything else has failed, we'll give it one final go to see if we can catch it. Ideally we should never get to here, but it's possible.
-                fnKickRecordLegacy
+		fnKickRecordLegacy
 	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.kick.com/$streamer" | grep streamlink) && -n $(screen -list | grep $streamer-$service) && $(echo $request | jq -r '.livestream.is_live') == "true" && ! " ${game[@]} " =~ " $(echo $request | jq -r '.livestream.categories[]?.name // null') " && $stopkickrecord == 1 && $monitorkickgame == 1 ]]; then
 		#If they change game and we have stop recording set, then stop recording.
 		stopgame=$(echo $request | jq -r '.livestream.categories[]?.name // null')
