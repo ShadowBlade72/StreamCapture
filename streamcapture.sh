@@ -157,7 +157,7 @@ fnAccessToken(){
 	if [[ -z "$request" || $(echo "$request" | jq -r '.error') != "null" || -z "$access_token" ]]; then
 		#This is doing the oauth authentication and saving the bearer token that we receive to the config file.
 		access_token=$(curl -s -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials&client_id=$clientid&client_secret=$clientsecret" https://id.twitch.tv/oauth2/token | jq -r '.access_token')
-		if [[ ${access_token} == 30 ]]; then
+		if [[ ${#access_token} == 30 ]]; then
 			echo "access_token=$access_token" > "$configfile"
 			fnLog "ERROR" "${RED}Twitch:${NC} Pulled new access token!"
 		else
@@ -183,10 +183,10 @@ fnRequestTwitch(){
 		fnLog "LOCAL" "${RED}Twitch:${NC} ${BLUE}$streamer${NC} is not live."
 		unset twitch
 		return
-	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.twitch.tv/$streamer" | grep streamlink)  && $(echo "$request" | jq -r '.data[].type') == "live" ]] && [[ " ${game[*]} " =~ " $(echo $request | jq -r '.data[]?.game_name // null') " || $monitortwitchgame == 0 ]]; then
+	elif [[ -z $(ps -ef | grep -v grep | grep "https://www.twitch.tv/$streamer" | grep streamlink)  && $(echo "$request" | jq -r '.data[].type') == "live" ]] && [[ " ${game[*]} " =~ " $(echo "$request" | jq -r '.data[]?.game_name // null') " || "$monitortwitchgame" == 0 ]]; then
 		#If we aren't already recording, and the game they're playing matches what we want to record, then start recording.
 		fnStartTwitchRecord
-	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.twitch.tv/$streamer" | grep streamlink) && $(echo "$request" | jq -r '.data[].type') == "live" && ! " ${game[*]} " =~ " $(echo $request | jq -r '.data[]?.game_name // null') " && $stoptwitchrecord == 1 && $monitortwitchgame == 1 ]]; then
+	elif [[ -n $(ps -ef | grep -v grep | grep "https://www.twitch.tv/$streamer" | grep streamlink) && $(echo "$request" | jq -r '.data[].type') == "live" && ! " ${game[*]} " =~ " $(echo "$request" | jq -r '.data[]?.game_name // null') " && "$stoptwitchrecord" == 1 && "$monitortwitchgame" == 1 ]]; then
 		#If they change game and we have stop recording set, then stop recording.
 		stopgame=$(echo "$request" | jq -r '.data[]?.game_name // null')
 		fnStopRecord
@@ -236,7 +236,7 @@ fnRequestKick(){
 
 fnStartTwitchRecord(){
 	# Creates an output name of "streamer_S(two digit year)E(julian date)_stream title_[streamid]"
-	outputname=$(echo "$request" | jq -j --arg jdate $(date +"%j") --arg ydate $(date +"%y") --arg random "$RANDOM" '.data[].user_login," - S",$ydate,"E",$jdate," - ",.data[].title," [",.data[].id + $random,"]"' | tr -dc '[:print:]' | tr -d '<>:"/\\|?*' | tr -s " ")
+	outputname=$(echo "$request" | jq -j --arg jdate "$(date +%j)" --arg ydate "$(date +%y)" --arg random "$RANDOM" '.data[].user_login," - S",$ydate,"E",$jdate," - ",.data[].title," [",.data[].id + $random,"]"' | tr -dc '[:print:]' | tr -d '<>:"/\\|?*' | tr -s " ")
 	fnLog "SUCCESS" "${GREEN}Twitch:${NC} Starting recording of ${BLUE}$streamer${NC} playing ${GREEN}$(echo "$request" | jq -r '.data[]?.game_name // null')${NC}. File name: ${YELLOW}$outputname.mp4${NC}"
 	if [[ $debug -ge 1 ]]; then
 		screen -dmS "$streamer-$service" -L -Logfile "$destpath/logs/$outputname.txt" bash -c "streamlink --stdout https://www.twitch.tv/$streamer best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
@@ -247,7 +247,7 @@ fnStartTwitchRecord(){
 
 fnStartKickRecord(){
 	# Creates an output name of "streamer_S(two digit year)E(julian date)_stream title_[streamid]"
-	outputname=$(echo "$request" | jq -j --arg jdate $(date +"%j") --arg ydate $(date +"%y") --arg random "$RANDOM" '.user.username," - S",$ydate,"E",$jdate," - ",.livestream.session_title," [",(.livestream.id|tostring) + $random,"]"' | tr -dc '[:print:]' | tr -d '<>:"/\\|?*' | tr -s " " )
+	outputname=$(echo "$request" | jq -j --arg jdate "$(date +%j)" --arg ydate "$(date +%y)" --arg random "$RANDOM" '.user.username," - S",$ydate,"E",$jdate," - ",.livestream.session_title," [",(.livestream.id|tostring) + $random,"]"' | tr -dc '[:print:]' | tr -d '<>:"/\\|?*' | tr -s " " )
 	fnLog "SUCCESS" "${GREEN}Kick:${NC} Starting recording of ${BLUE}$streamer${NC} playing ${GREEN}$(echo "$request" | jq -r '.livestream.categories[]?.name // null')${NC}. File name: ${YELLOW}$outputname.mp4${NC}"
 	if [[ $debug -ge 1 ]]; then
 		screen -dmS "$streamer-$service" -L -Logfile "$destpath/logs/$outputname.txt" bash -c "streamlink --stdout https://www.kick.com/$streamer best | ffmpeg -i - -movflags faststart -c copy \"$destpath/$streamer/$outputname.mp4\""
