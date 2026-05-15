@@ -216,7 +216,7 @@ Run it manually:
 For normal use, run it from cron every minute:
 
 ```cron
-* * * * * /path/to/StreamCapture/streamcapture.sh >> /path/to/StreamCapture/cron.log 2>&1
+* * * * * /path/to/StreamCapture/streamcapture.sh
 ```
 
 Use absolute paths in cron. Cron runs with a limited environment, so make sure `streamlink`, `jq`, `ffmpeg`, and the other dependencies are available in the cron user's `PATH`.
