@@ -1,0 +1,2433 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StreamCapture</title>
+  <link rel="icon" type="image/svg+xml" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="14" fill="%23101828"/%3E%3Crect x="14" y="18" width="36" height="36" rx="8" fill="%237c3aed"/%3E%3Ccircle cx="32" cy="36" r="14" fill="none" stroke="%23fff" stroke-width="4.5"/%3E%3Ccircle cx="32" cy="36" r="6" fill="%23fff"/%3E%3Ccircle cx="47" cy="17" r="7" fill="%23d92d20"/%3E%3C/svg%3E'>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --surface: #ffffff;
+      --surface-2: #eef2f7;
+      --text: #101828;
+      --muted: #667085;
+      --line: #d8dee8;
+      --accent: #7c3aed;
+      --accent-2: #00b879;
+      --danger: #d92d20;
+      --warning: #f79009;
+      --shadow: 0 18px 45px rgba(16, 24, 40, 0.11);
+    }
+
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #101114;
+      --surface: #181a20;
+      --surface-2: #232630;
+      --text: #f2f4f7;
+      --muted: #a7adba;
+      --line: #303542;
+      --accent: #a78bfa;
+      --accent-2: #32d583;
+      --danger: #f97066;
+      --warning: #fdb022;
+      --shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(124, 58, 237, 0.15), transparent 34rem),
+        linear-gradient(180deg, var(--bg), var(--surface-2));
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1440px, 100%);
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    .dashboard-nav {
+      margin-bottom: 24px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--surface) 92%, var(--accent) 8%),
+          color-mix(in srgb, var(--surface-2) 78%, var(--surface) 22%)
+        );
+      box-shadow: 0 12px 32px rgba(16, 24, 40, 0.09);
+      backdrop-filter: blur(12px);
+    }
+
+    [data-theme="dark"] .dashboard-nav {
+      background:
+        linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--surface) 88%, var(--accent) 12%),
+          color-mix(in srgb, var(--surface-2) 86%, var(--surface) 14%)
+        );
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .dashboard-nav.condensed .topbar {
+      margin-bottom: 0;
+    }
+
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: clamp(34px, 4vw, 42px);
+      height: clamp(34px, 4vw, 42px);
+      flex: 0 0 auto;
+      color: var(--accent);
+    }
+
+    .brand-mark-bg {
+      fill: color-mix(in srgb, var(--surface) 72%, var(--accent) 28%);
+    }
+
+    [data-theme="dark"] .brand-mark-bg {
+      fill: color-mix(in srgb, var(--surface) 82%, var(--accent) 18%);
+    }
+
+    .brand-copy {
+      min-width: 0;
+    }
+
+    .brand-title {
+      margin: 0 0 4px;
+      font-size: clamp(1.35rem, 2.2vw, 1.8rem);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .brand-title-accent {
+      color: var(--accent);
+      font-weight: 750;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .primary-actions,
+    .utility-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .primary-actions {
+      flex-wrap: wrap;
+    }
+
+    .button,
+    .theme-toggle {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 14px;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+      transition: border-color 150ms ease, transform 150ms ease, background 150ms ease;
+    }
+
+    .button:hover,
+    .theme-toggle:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .audio-toggle[aria-pressed="true"] {
+      border-color: color-mix(in srgb, var(--accent-2) 55%, var(--line));
+      background: color-mix(in srgb, var(--accent-2) 12%, var(--surface));
+      color: var(--accent-2);
+    }
+
+    .condense-toggle[aria-pressed="true"],
+    .grid-only-toggle[aria-pressed="true"] {
+      border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+      background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+      color: var(--accent);
+    }
+
+    .audio-control {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .audio-control::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      height: 10px;
+      pointer-events: auto;
+    }
+
+    .audio-settings {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      z-index: 20;
+      width: min(290px, calc(100vw - 32px));
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      overflow: hidden;
+      opacity: 0;
+      padding: 10px;
+      pointer-events: none;
+      box-shadow: none;
+      transform: translateY(-4px);
+      transition: border-color 150ms ease, opacity 150ms ease, transform 150ms ease;
+    }
+
+    .audio-control.is-open .audio-settings,
+    .audio-control:focus-within .audio-settings {
+      border-color: var(--line);
+      opacity: 1;
+      pointer-events: auto;
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+      transform: translateY(0);
+    }
+
+    .audio-settings label {
+      display: inline-flex;
+      align-items: center;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .audio-settings label:first-child {
+      flex: 0 0 auto;
+    }
+
+    .audio-sound {
+      width: 100%;
+      min-width: 0;
+      height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 0 28px 0 9px;
+      cursor: pointer;
+    }
+
+    .audio-volume {
+      flex: 0 0 auto;
+      min-width: 0;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .audio-volume input[type="range"] {
+      min-height: 0;
+      width: 100%;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      accent-color: var(--accent-2);
+      cursor: pointer;
+    }
+
+    .audio-volume input[type="range"]:focus,
+    .audio-sound:focus {
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    .audio-settings:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.16);
+    }
+
+    .utility-actions {
+      margin-left: 8px;
+      padding-left: 12px;
+      border-left: 1px solid var(--line);
+    }
+
+    .settings-wrap {
+      position: relative;
+      display: inline-flex;
+    }
+
+    .settings-panel {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      z-index: 20;
+      width: min(420px, calc(100vw - 32px));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .settings-panel[hidden] {
+      display: none;
+    }
+
+    .settings-form {
+      display: grid;
+      gap: 10px;
+    }
+
+    .settings-label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .settings-input-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+    }
+
+    .settings-input-row input {
+      padding: 0 12px;
+    }
+
+    .settings-save {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+      color: var(--accent);
+      cursor: pointer;
+      font-weight: 800;
+      padding: 0 14px;
+    }
+
+    .theme-toggle {
+      width: 42px;
+      padding: 0;
+    }
+
+    .icon {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex: 0 0 auto;
+    }
+
+    .statusline {
+      color: var(--muted);
+      font-size: 0.9rem;
+      min-height: 1.3em;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .metric {
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    [data-theme="dark"] .metric {
+      background: rgba(24, 26, 32, 0.78);
+    }
+
+    .metrics.condensed {
+      display: none;
+    }
+
+    .toolbar.condensed {
+      display: none;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .metric-value {
+      display: block;
+      margin-top: 8px;
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 12px;
+      align-items: center;
+      margin: 18px 0 0;
+    }
+
+    .search-wrap,
+    .select-wrap {
+      position: relative;
+    }
+
+    .search-wrap .icon {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+      transition: border-color 150ms ease, box-shadow 150ms ease;
+    }
+
+    input {
+      padding: 0 14px 0 42px;
+    }
+
+    select {
+      min-width: 170px;
+      padding: 0 36px 0 12px;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.16);
+    }
+
+    .recording-section {
+      margin: 18px 0;
+      --recording-tile-size: 220px;
+      --recording-tile-padding: 14px;
+      --recording-tile-gap: 12px;
+      --recording-summary-gap: 10px;
+      --recording-avatar-size: 46px;
+      --recording-avatar-font-size: 1rem;
+      --recording-name-size: 1.05rem;
+      --recording-title-size: 0.86rem;
+      --recording-title-line-height: 1.25;
+      --recording-title-lines: 4;
+      --recording-meta-size: 0.82rem;
+      --recording-viewers-size: 1.3rem;
+      --recording-status-dot-size: 9px;
+      --recording-status-dot-offset: 12px;
+    }
+
+    .recording-section[data-grid-size="small"] {
+      --recording-tile-size: 170px;
+      --recording-title-lines: 3;
+    }
+
+    .recording-section[data-grid-size="large"] {
+      --recording-tile-size: 280px;
+      --recording-tile-padding: 18px;
+      --recording-tile-gap: 14px;
+      --recording-summary-gap: 12px;
+      --recording-avatar-size: 62px;
+      --recording-avatar-font-size: 1.22rem;
+      --recording-name-size: 1.28rem;
+      --recording-title-size: 1rem;
+      --recording-title-lines: 5;
+      --recording-meta-size: 0.92rem;
+      --recording-viewers-size: 1.72rem;
+      --recording-status-dot-size: 11px;
+      --recording-status-dot-offset: 15px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.2;
+    }
+
+    .section-title.grid-break-label {
+      flex: 1 1 auto;
+    }
+
+    .section-count {
+      color: var(--muted);
+      font-size: 0.88rem;
+      white-space: nowrap;
+    }
+
+    .section-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .size-toggle {
+      display: inline-flex;
+      align-items: center;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+    }
+
+    .size-toggle button {
+      min-width: 42px;
+      min-height: 32px;
+      border: 0;
+      border-right: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .size-toggle button:last-child {
+      border-right: 0;
+    }
+
+    .size-toggle button:hover,
+    .size-toggle button:focus-visible {
+      color: var(--text);
+      background: color-mix(in srgb, var(--accent) 8%, transparent);
+    }
+
+    .size-toggle button[aria-pressed="true"] {
+      color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 13%, var(--surface));
+    }
+
+    .recording-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, var(--recording-tile-size));
+      justify-content: left;
+      gap: 12px;
+    }
+
+    .grid-break-label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .grid-break-label::after {
+      content: "";
+      height: 1px;
+      flex: 1;
+      background: var(--line);
+    }
+
+    .recent-offline-break {
+      margin: 22px 0 12px;
+    }
+
+    .recording-tile {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: var(--recording-tile-gap);
+      aspect-ratio: 1;
+      width: var(--recording-tile-size);
+      min-width: 0;
+      overflow: hidden;
+      border: 1.5px solid color-mix(in srgb, var(--danger) 34%, var(--line));
+      border-radius: 8px;
+      background:
+        linear-gradient(to top right, color-mix(in srgb, #067ed485 55%, transparent), transparent 95%),
+        var(--surface);
+      padding: var(--recording-tile-padding);
+      box-shadow: var(--shadow);
+      color: inherit;
+      text-decoration: none;
+      transition: border-color 150ms ease, transform 150ms ease;
+    }
+
+    .recording-tile:hover,
+    .recording-tile:focus-visible {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .recording-tile:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--accent) 28%, transparent);
+      outline-offset: 3px;
+    }
+
+    .recording-tile.live-only {
+      border-color: color-mix(in srgb, var(--accent-2) 34%, var(--line));
+    }
+
+    .recording-tile.recent-offline {
+      border-color: color-mix(in srgb, var(--muted) 34%, var(--line));
+      background:
+        linear-gradient(to top right, color-mix(in srgb, var(--muted) 24%, transparent), transparent 95%),
+        var(--surface);
+    }
+
+    .recording-tile.live-only:hover,
+    .recording-tile.recent-offline:hover,
+    .recording-tile.recent-offline:focus-visible,
+    .recording-tile.live-only:focus-visible {
+      border-color: var(--accent);
+    }
+
+    .recording-tile::before {
+      content: "";
+      position: absolute;
+      top: var(--recording-status-dot-offset);
+      right: var(--recording-status-dot-offset);
+      width: var(--recording-status-dot-size);
+      height: var(--recording-status-dot-size);
+      border-radius: 50%;
+      background: var(--danger);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 14%, transparent);
+    }
+
+    .recording-tile.live-only::before {
+      background: var(--accent-2);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-2) 14%, transparent);
+    }
+
+    .recording-tile.recent-offline::before {
+      background: var(--muted);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--muted) 14%, transparent);
+    }
+
+    .recording-summary {
+      display: flex;
+      align-items: center;
+      gap: var(--recording-summary-gap);
+      min-width: 0;
+    }
+
+    .recording-summary-copy {
+      min-width: 0;
+      padding-right: 18px;
+    }
+
+    .recording-avatar {
+      width: var(--recording-avatar-size);
+      height: var(--recording-avatar-size);
+      flex: 0 0 var(--recording-avatar-size);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #fff;
+      font-weight: 900;
+      font-size: var(--recording-avatar-font-size);
+      text-transform: uppercase;
+    }
+
+    .live-only .recording-avatar {
+      background: linear-gradient(135deg, var(--accent-2), #06b6d4);
+    }
+
+    .recent-offline .recording-avatar {
+      background: linear-gradient(135deg, var(--muted), color-mix(in srgb, var(--muted) 64%, var(--surface)));
+    }
+
+    .recording-avatar.platform-twitch {
+      background:
+        radial-gradient(circle at 28% 20%, color-mix(in srgb, #fff 26%, var(--accent)), transparent 34%),
+        linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 72%, #111827));
+    }
+
+    .recording-avatar.platform-kick {
+      background:
+        radial-gradient(circle at 28% 20%, color-mix(in srgb, #fff 24%, var(--accent-2)), transparent 34%),
+        linear-gradient(135deg, var(--accent-2), color-mix(in srgb, var(--accent-2) 70%, #0f172a));
+    }
+
+    .recording-name,
+    .recording-title,
+    .recording-meta {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .recording-details {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .recording-name {
+      margin-top: 0;
+      font-size: var(--recording-name-size);
+      font-weight: 900;
+    }
+
+    .recording-title {
+      color: color-mix(in srgb, var(--text) 78%, var(--muted));
+      font-size: var(--recording-title-size);
+    }
+
+    .recording-game {
+      color: color-mix(in srgb, var(--muted) 50%, var(--text));
+      font-weight: 750;
+      min-width: 0;
+      max-width: 68%;
+    }
+
+    .recording-stream-title {
+      display: -webkit-box;
+      max-height: calc(var(--recording-title-size) * var(--recording-title-line-height) * var(--recording-title-lines));
+      overflow: hidden;
+      line-height: var(--recording-title-line-height);
+      white-space: normal;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: var(--recording-title-lines);
+    }
+
+    .recording-meta {
+      color: var(--muted);
+      font-size: var(--recording-meta-size);
+    }
+
+    .recording-last-live {
+      margin-top: 8px;
+    }
+
+    .recording-footer {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: auto;
+      min-width: 0;
+    }
+
+    .recording-viewers {
+      font-variant-numeric: tabular-nums;
+      font-size: var(--recording-viewers-size);
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .recording-viewer-stack {
+      display: flex;
+      align-items: baseline;
+      flex: 0 0 auto;
+      gap: 4px;
+      text-align: right;
+    }
+
+    .recording-section[data-grid-size="small"] .recording-viewer-stack {
+      display: none;
+    }
+
+    .table-shell {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    body[data-grid-only="true"] .table-shell,
+    body[data-grid-only="true"] .mobile-list {
+      display: none;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    thead {
+      background: var(--surface-2);
+    }
+
+    th,
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: middle;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      transition: background 150ms ease;
+    }
+
+    tbody tr:hover {
+      background: color-mix(in srgb, var(--accent) 7%, transparent);
+    }
+
+    tbody tr[data-stream-url] {
+      cursor: pointer;
+    }
+
+    tbody tr[data-stream-url]:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--accent) 28%, transparent);
+      outline-offset: -3px;
+      background: color-mix(in srgb, var(--accent) 9%, transparent);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .streamer {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      gap: 12px;
+    }
+
+    .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      background: linear-gradient(135deg, var(--accent), #06b6d4);
+      color: #fff;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .name {
+      min-width: 0;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .name-wrap {
+      min-width: 0;
+    }
+
+    .platform {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .title,
+    .filename {
+      display: block;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .title {
+      font-weight: 700;
+    }
+
+    .game {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .filename {
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.86rem;
+    }
+
+    .filename.file-open {
+      cursor: pointer;
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .filename.file-open:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--accent) 28%, transparent);
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 28px;
+      border-radius: 999px;
+      padding: 0 10px;
+      font-size: 0.82rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .pill::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .live {
+      background: color-mix(in srgb, var(--accent-2) 16%, transparent);
+      color: var(--accent-2);
+    }
+
+    .offline {
+      background: color-mix(in srgb, var(--muted) 15%, transparent);
+      color: var(--muted);
+    }
+
+    .recording {
+      background: color-mix(in srgb, var(--danger) 14%, transparent);
+      color: var(--danger);
+    }
+
+    .idle {
+      background: color-mix(in srgb, var(--warning) 15%, transparent);
+      color: var(--warning);
+    }
+
+    .viewers {
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .empty {
+      padding: 46px 18px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .mobile-list {
+      display: none;
+      gap: 12px;
+    }
+
+    .stream-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-head,
+    .card-pills {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .card-pills {
+      margin-top: 14px;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .card-title {
+      margin-top: 14px;
+    }
+
+    .card-meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .card-meta strong {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .confetti-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .cursor-toast {
+      position: fixed;
+      z-index: 1001;
+      max-width: min(260px, calc(100vw - 28px));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: var(--shadow);
+      padding: 10px 12px;
+      font-size: 0.88rem;
+      font-weight: 800;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 150ms ease, transform 150ms ease;
+    }
+
+    .cursor-toast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .cursor-toast[hidden] {
+      display: none;
+    }
+
+    .confetti-piece {
+      position: absolute;
+      bottom: -18px;
+      width: 10px;
+      height: 16px;
+      border-radius: 2px;
+      opacity: 0;
+      animation: confetti-fall var(--fall-duration, 2200ms) cubic-bezier(0.18, 0.72, 0.38, 0.98) forwards;
+    }
+
+    @keyframes confetti-fall {
+      0% {
+        opacity: 1;
+        transform: translate3d(0, 20px, 0) rotate(0deg);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate3d(var(--drift, 0px), -110vh, 0) rotate(var(--spin, 540deg));
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .confetti-piece {
+        animation: none;
+        display: none;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .app {
+        padding: 22px;
+      }
+
+      .topbar {
+        flex-direction: column;
+      }
+
+      .actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .toolbar {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .toolbar .search-wrap {
+        grid-column: 1 / -1;
+      }
+
+      .table-shell {
+        display: none;
+      }
+
+      .mobile-list {
+        display: grid;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .app {
+        padding: 16px;
+      }
+
+      .metrics,
+      .toolbar,
+      .card-meta {
+        grid-template-columns: 1fr;
+      }
+
+      .section-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .section-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .recording-section {
+        --recording-tile-size: min(220px, calc(100vw - 32px));
+      }
+
+      .recording-section[data-grid-size="small"] {
+        --recording-tile-size: min(170px, calc((100vw - 44px) / 2));
+      }
+
+      .recording-section[data-grid-size="large"] {
+        --recording-tile-size: min(280px, calc(100vw - 32px));
+      }
+
+      .button {
+        flex: 1 1 auto;
+      }
+
+      .primary-actions {
+        flex: 1 1 100%;
+        gap: 8px;
+      }
+
+      .audio-control {
+        flex: 0 0 auto;
+      }
+
+      .settings-wrap {
+        flex: 1 1 auto;
+      }
+
+      .utility-actions {
+        gap: 8px;
+        margin-left: 0;
+        padding-left: 0;
+        border-left: 0;
+      }
+
+      .settings-input-row {
+        grid-template-columns: 1fr;
+      }
+
+      select {
+        min-width: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="dashboard-nav" aria-label="Dashboard navigation and filters">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
+            <rect class="brand-mark-bg" width="64" height="64" rx="14"/>
+            <rect x="14" y="18" width="36" height="36" rx="8" fill="currentColor"/>
+            <circle cx="32" cy="36" r="14" fill="none" stroke="var(--surface)" stroke-width="4.5"/>
+            <circle cx="32" cy="36" r="6" fill="var(--surface)"/>
+            <circle cx="47" cy="17" r="7" fill="var(--danger)"/>
+          </svg>
+          <div class="brand-copy">
+            <h1 class="brand-title">StreamCapture <span class="brand-title-accent">Dashboard</span></h1>
+          </div>
+        </div>
+        <div class="actions" aria-label="Dashboard controls">
+          <div class="primary-actions" aria-label="Primary dashboard controls">
+            <button class="button" id="refreshButton" type="button">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 0 1-15.1 6.6"/><path d="M3 12A9 9 0 0 1 18.1 5.4"/><path d="M21 3v6h-6"/><path d="M3 21v-6h6"/></svg>
+              Refresh
+            </button>
+            <button class="theme-toggle condense-toggle" id="condenseButton" type="button" aria-label="Show metrics" aria-pressed="true" title="Show metrics">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18"/><path d="M3 6h18"/><path d="M3 18h18"/></svg>
+            </button>
+            <button class="theme-toggle grid-only-toggle" id="gridOnlyButton" type="button" aria-label="Show rows" aria-pressed="true" title="Show rows">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            </button>
+            <div class="audio-control">
+              <button class="theme-toggle audio-toggle" id="audioButton" type="button" aria-label="Turn audio alerts off" aria-pressed="true" title="Audio alerts on">
+                <svg class="icon" id="audioIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.4 5.6a9 9 0 0 1 0 12.8"/></svg>
+              </button>
+              <div class="audio-settings" id="audioSettings">
+                <label>
+                  <span class="sr-only">Alert sound</span>
+                  <select class="audio-sound" id="audioSound" aria-label="Alert sound" title="Alert sound">
+                    <option value="chime">Chime</option>
+                    <option value="ping">Ping</option>
+                    <option value="pulse">Pulse</option>
+                    <option value="fanfare" selected>Fanfare</option>
+                    <option value="bell">Bell</option>
+                  </select>
+                </label>
+                <label class="audio-volume" id="audioVolumeWrap" title="Alert volume">
+                  <span class="sr-only">Alert volume</span>
+                  <input id="audioVolume" type="range" min="0" max="100" step="1" value="50" aria-label="Alert volume">
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="utility-actions" aria-label="Utility controls">
+            <button class="theme-toggle" id="confettiButton" type="button" aria-label="Test alerts" title="Test alerts">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.8 11.3 3 21l9.7-2.8"/><path d="m4.8 17.5 4.7 1.7"/><path d="m6.5 12.8 4.7 4.7"/><path d="M9 10V5"/><path d="M13 6l2-2"/><path d="M14 11h5"/><path d="M18 8l3-3"/><path d="M19 14l2 2"/><path d="M11 3l1 1"/></svg>
+            </button>
+            <div class="settings-wrap">
+              <button class="theme-toggle" id="settingsButton" type="button" aria-label="Open settings" aria-expanded="false" title="Settings">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.8 1.8 0 0 0 15 19.4a1.8 1.8 0 0 0-1 .6 1.8 1.8 0 0 0-.44 1.2V21a2 2 0 1 1-4 0v-.08A1.8 1.8 0 0 0 8.6 19.4a1.8 1.8 0 0 0-1.98.36l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.8 1.8 0 0 0 4.6 15a1.8 1.8 0 0 0-.6-1 1.8 1.8 0 0 0-1.2-.44H3a2 2 0 1 1 0-4h.08A1.8 1.8 0 0 0 4.6 8.6a1.8 1.8 0 0 0-.36-1.98l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.8 1.8 0 0 0 9 4.6a1.8 1.8 0 0 0 1-.6 1.8 1.8 0 0 0 .44-1.2V3a2 2 0 1 1 4 0v.08A1.8 1.8 0 0 0 15.4 4.6a1.8 1.8 0 0 0 1.98-.36l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.8 1.8 0 0 0 19.4 9c.24.36.6.6 1 .6h.6a2 2 0 1 1 0 4h-.08a1.8 1.8 0 0 0-1.52 1.4Z"/></svg>
+              </button>
+              <div class="settings-panel" id="settingsPanel" hidden>
+                <form class="settings-form" id="settingsForm">
+                  <label class="settings-label" for="destPathInput">Destination path</label>
+                  <div class="settings-input-row">
+                    <input id="destPathInput" type="text" spellcheck="false" autocomplete="off" placeholder="\\192.168.1.xxx\Recordings">
+                    <button class="settings-save" type="submit">Save</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+            <button class="theme-toggle" id="themeButton" type="button" aria-label="Switch to dark mode" title="Toggle theme">
+              <svg class="icon" id="themeIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 7.2A9 9 0 1 1 12 3Z"/></svg>
+            </button>
+          </div>
+          <div class="statusline" id="statusLine" aria-live="polite">Waiting for first update...</div>
+        </div>
+      </header>
+
+      <section class="metrics" aria-label="Stream summary">
+        <div class="metric">
+          <span class="metric-label">Live now</span>
+          <strong class="metric-value" id="liveCount">0</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Recording</span>
+          <strong class="metric-value" id="recordingCount">0</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Total viewers</span>
+          <strong class="metric-value" id="viewerTotal">0</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Tracked</span>
+          <strong class="metric-value" id="trackedCount">0</strong>
+        </div>
+      </section>
+
+      <section class="toolbar" aria-label="Filters">
+        <label class="search-wrap">
+          <span class="sr-only">Search streamers</span>
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.3-4.3"/><circle cx="11" cy="11" r="8"/></svg>
+          <input id="searchInput" type="search" placeholder="Search streamer, game, title, or file">
+        </label>
+        <label class="select-wrap">
+          <span class="sr-only">Filter by status</span>
+          <select id="statusFilter">
+            <option value="all">All statuses</option>
+            <option value="live">Live only</option>
+            <option value="offline">Offline only</option>
+            <option value="recording">Recording only</option>
+          </select>
+        </label>
+        <label class="select-wrap">
+          <span class="sr-only">Filter by platform</span>
+          <select id="platformFilter">
+            <option value="all">All platforms</option>
+          </select>
+        </label>
+      </section>
+    </section>
+
+    <section class="recording-section" id="recordingSection" aria-label="Live and recent streams" hidden>
+      <div class="section-head">
+        <h2 class="section-title grid-break-label">Currently Live</h2>
+        <div class="section-actions">
+          <span class="section-count" id="recordingGridCount">0 streams</span>
+          <div class="size-toggle" aria-label="Live box size">
+            <button type="button" data-grid-size="small" aria-pressed="false" title="Small live boxes">S</button>
+            <button type="button" data-grid-size="medium" aria-pressed="true" title="Medium live boxes">M</button>
+            <button type="button" data-grid-size="large" aria-pressed="false" title="Large live boxes">L</button>
+          </div>
+        </div>
+      </div>
+      <div class="recording-grid" id="recordingGrid"></div>
+      <div class="grid-break-label recent-offline-break" id="recentOfflineBreak" hidden>Recently live</div>
+      <div class="recording-grid" id="recentOfflineGrid"></div>
+    </section>
+
+    <section class="table-shell" aria-label="Streamer status table">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 20%;">Streamer</th>
+            <th style="width: 10%;">Status</th>
+            <th style="width: 24%;">Stream</th>
+            <th style="width: 9%;">Viewers</th>
+            <th style="width: 12%;">Recording</th>
+            <th style="width: 11%;">Last Live</th>
+            <th style="width: 14%;">File</th>
+          </tr>
+        </thead>
+        <tbody id="streamTable"></tbody>
+      </table>
+      <div class="empty" id="emptyTable" hidden>No streamers match the current filters.</div>
+    </section>
+
+    <section class="mobile-list" id="mobileList" aria-label="Streamer status cards"></section>
+  </main>
+  <div class="confetti-layer" id="confettiLayer" aria-hidden="true"></div>
+  <div class="cursor-toast" id="cursorToast" role="status" aria-live="polite" hidden>Copied to clipboard</div>
+
+  <script>
+    const API_URL = 'status.json';
+    const POLL_INTERVAL_MS = 60000;
+    const AUDIO_ALERT_STORAGE_KEY = 'streamcapture-audio-alerts';
+    const AUDIO_ALERT_VOLUME_STORAGE_KEY = 'streamcapture-audio-alert-volume';
+    const AUDIO_ALERT_SOUND_STORAGE_KEY = 'streamcapture-audio-alert-sound';
+    const AUDIO_ALERT_MAX_GAIN = 1.0;
+    const LIVE_GRID_SIZE_STORAGE_KEY = 'streamcapture-live-grid-size';
+    const GRID_ONLY_STORAGE_KEY = 'streamcapture-grid-only';
+    const CONDENSED_METRICS_STORAGE_KEY = 'streamcapture-condensed-metrics';
+    const DEST_PATH_STORAGE_KEY = 'streamcapture-destination-path';
+    const RECENT_LIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
+    const CONFETTI_COLORS = ['#7c3aed', '#00b879', '#06b6d4', '#f79009', '#d92d20', '#fdb022'];
+    const EMPTY_FILTER_MESSAGE = 'No streamers match the current filters.';
+    const DEFAULT_STREAMER_NAME = 'Unknown';
+    const DEFAULT_PLATFORM_NAME = 'Unknown platform';
+    const STATUS_META = {
+      live: { className: 'live', label: 'Live' },
+      offline: { className: 'offline', label: 'Offline' },
+      recording: { className: 'recording', label: 'Recording' },
+      idle: { className: 'idle', label: 'Idle' }
+    };
+    const AUDIO_ALERT_SOUNDS = {
+      chime: {
+        label: 'Chime',
+        notes: [
+          { frequency: 523.25, start: 0, duration: 0.42, type: 'sine', gain: 0.58 },
+          { frequency: 659.25, start: 0.18, duration: 0.46, type: 'sine', gain: 0.56 },
+          { frequency: 783.99, start: 0.36, duration: 0.5, type: 'sine', gain: 0.52 },
+          { frequency: 1046.5, start: 0.72, duration: 0.56, type: 'triangle', gain: 0.46 },
+          { frequency: 783.99, start: 1.18, duration: 0.5, type: 'sine', gain: 0.42 },
+          { frequency: 987.77, start: 1.58, duration: 0.52, type: 'sine', gain: 0.38 },
+          { frequency: 1318.51, start: 2.05, duration: 0.68, type: 'triangle', gain: 0.32 },
+          { frequency: 1567.98, start: 2.32, duration: 0.5, type: 'sine', gain: 0.22 }
+        ],
+        release: 3
+      },
+      ping: {
+        label: 'Ping',
+        notes: [
+          { frequency: 880, start: 0, duration: 0.16, type: 'triangle', gain: 0.64 },
+          { frequency: 1318.51, start: 0.16, duration: 0.18, type: 'sine', gain: 0.58 },
+          { frequency: 1760, start: 0.36, duration: 0.18, type: 'triangle', gain: 0.46 },
+          { frequency: 987.77, start: 0.78, duration: 0.18, type: 'triangle', gain: 0.58 },
+          { frequency: 1480, start: 0.94, duration: 0.2, type: 'sine', gain: 0.5 },
+          { frequency: 1975.53, start: 1.16, duration: 0.22, type: 'triangle', gain: 0.4 },
+          { frequency: 1174.66, start: 1.66, duration: 0.2, type: 'triangle', gain: 0.48 },
+          { frequency: 1760, start: 1.84, duration: 0.22, type: 'sine', gain: 0.42 },
+          { frequency: 2349.32, start: 2.1, duration: 0.26, type: 'triangle', gain: 0.3 },
+          { frequency: 1567.98, start: 2.54, duration: 0.28, type: 'sine', gain: 0.24 }
+        ],
+        release: 3
+      },
+      pulse: {
+        label: 'Pulse',
+        notes: [
+          { frequency: 196, start: 0, duration: 0.2, type: 'square', gain: 0.32 },
+          { frequency: 392, start: 0.04, duration: 0.24, type: 'triangle', gain: 0.26 },
+          { frequency: 196, start: 0.48, duration: 0.2, type: 'square', gain: 0.34 },
+          { frequency: 440, start: 0.52, duration: 0.24, type: 'triangle', gain: 0.28 },
+          { frequency: 220, start: 0.96, duration: 0.22, type: 'square', gain: 0.34 },
+          { frequency: 493.88, start: 1, duration: 0.28, type: 'triangle', gain: 0.26 },
+          { frequency: 246.94, start: 1.46, duration: 0.24, type: 'square', gain: 0.32 },
+          { frequency: 523.25, start: 1.5, duration: 0.3, type: 'triangle', gain: 0.24 },
+          { frequency: 293.66, start: 1.96, duration: 0.24, type: 'square', gain: 0.3 },
+          { frequency: 587.33, start: 2, duration: 0.34, type: 'triangle', gain: 0.22 },
+          { frequency: 329.63, start: 2.46, duration: 0.28, type: 'square', gain: 0.24 }
+        ],
+        release: 3
+      },
+      fanfare: {
+        label: 'Fanfare',
+        notes: [
+          { frequency: 261.63, start: 0, duration: 0.34, type: 'sawtooth', gain: 0.28 },
+          { frequency: 329.63, start: 0, duration: 0.34, type: 'triangle', gain: 0.22 },
+          { frequency: 392, start: 0.28, duration: 0.34, type: 'sawtooth', gain: 0.3 },
+          { frequency: 523.25, start: 0.28, duration: 0.34, type: 'triangle', gain: 0.22 },
+          { frequency: 523.25, start: 0.68, duration: 0.38, type: 'sawtooth', gain: 0.32 },
+          { frequency: 659.25, start: 0.68, duration: 0.38, type: 'triangle', gain: 0.24 },
+          { frequency: 783.99, start: 1.12, duration: 0.5, type: 'sawtooth', gain: 0.28 },
+          { frequency: 987.77, start: 1.12, duration: 0.5, type: 'triangle', gain: 0.2 },
+          { frequency: 659.25, start: 1.72, duration: 0.38, type: 'sawtooth', gain: 0.26 },
+          { frequency: 880, start: 1.72, duration: 0.38, type: 'triangle', gain: 0.2 },
+          { frequency: 1046.5, start: 2.22, duration: 0.62, type: 'triangle', gain: 0.32 },
+          { frequency: 1318.51, start: 2.22, duration: 0.54, type: 'sine', gain: 0.2 }
+        ],
+        release: 3
+      },
+      bell: {
+        label: 'Bell',
+        notes: [
+          { frequency: 659.25, start: 0, duration: 0.9, type: 'sine', gain: 0.48 },
+          { frequency: 1318.51, start: 0.02, duration: 0.72, type: 'sine', gain: 0.22 },
+          { frequency: 1975.53, start: 0.04, duration: 0.56, type: 'sine', gain: 0.12 },
+          { frequency: 783.99, start: 0.82, duration: 0.82, type: 'sine', gain: 0.4 },
+          { frequency: 1567.98, start: 0.84, duration: 0.66, type: 'sine', gain: 0.18 },
+          { frequency: 2349.32, start: 0.86, duration: 0.5, type: 'sine', gain: 0.1 },
+          { frequency: 987.77, start: 1.62, duration: 0.78, type: 'sine', gain: 0.34 },
+          { frequency: 1975.53, start: 1.64, duration: 0.62, type: 'sine', gain: 0.16 },
+          { frequency: 2960, start: 1.66, duration: 0.46, type: 'sine', gain: 0.08 },
+          { frequency: 1318.51, start: 2.34, duration: 0.5, type: 'triangle', gain: 0.22 }
+        ],
+        release: 3
+      }
+    };
+
+    const state = {
+      streamers: [],
+      filtered: [],
+      active: [],
+      recentOffline: [],
+      metrics: { live: 0, recording: 0, viewers: 0, tracked: 0 },
+      renderedMetrics: { live: '', recording: '', viewers: '', tracked: '' },
+      platforms: [],
+      lastUpdated: null,
+      timer: null,
+      liveKeys: null,
+      audioAlertsEnabled: true,
+      audioAlertVolume: 50,
+      audioAlertSound: 'fanfare',
+      audioSettingsCloseTimer: null,
+      liveGridSize: 'medium',
+      gridOnly: true,
+      destPath: '',
+      cursorToastTimer: null,
+      audioContext: null,
+      condensedMetrics: true
+    };
+
+    const els = {
+      liveCount: document.getElementById('liveCount'),
+      recordingCount: document.getElementById('recordingCount'),
+      viewerTotal: document.getElementById('viewerTotal'),
+      trackedCount: document.getElementById('trackedCount'),
+      statusLine: document.getElementById('statusLine'),
+      recordingSection: document.getElementById('recordingSection'),
+      recordingGrid: document.getElementById('recordingGrid'),
+      recentOfflineBreak: document.getElementById('recentOfflineBreak'),
+      recentOfflineGrid: document.getElementById('recentOfflineGrid'),
+      recordingGridCount: document.getElementById('recordingGridCount'),
+      gridSizeButtons: document.querySelectorAll('[data-grid-size]'),
+      streamTable: document.getElementById('streamTable'),
+      emptyTable: document.getElementById('emptyTable'),
+      mobileList: document.getElementById('mobileList'),
+      searchInput: document.getElementById('searchInput'),
+      statusFilter: document.getElementById('statusFilter'),
+      platformFilter: document.getElementById('platformFilter'),
+      refreshButton: document.getElementById('refreshButton'),
+      confettiButton: document.getElementById('confettiButton'),
+      settingsButton: document.getElementById('settingsButton'),
+      settingsPanel: document.getElementById('settingsPanel'),
+      settingsForm: document.getElementById('settingsForm'),
+      destPathInput: document.getElementById('destPathInput'),
+      gridOnlyButton: document.getElementById('gridOnlyButton'),
+      audioControl: document.querySelector('.audio-control'),
+      audioButton: document.getElementById('audioButton'),
+      audioIcon: document.getElementById('audioIcon'),
+      audioSettings: document.getElementById('audioSettings'),
+      audioSound: document.getElementById('audioSound'),
+      audioVolumeWrap: document.getElementById('audioVolumeWrap'),
+      audioVolume: document.getElementById('audioVolume'),
+      themeButton: document.getElementById('themeButton'),
+      themeIcon: document.getElementById('themeIcon'),
+      confettiLayer: document.getElementById('confettiLayer'),
+      cursorToast: document.getElementById('cursorToast'),
+      condenseButton: document.getElementById('condenseButton'),
+      dashboardNav: document.querySelector('.dashboard-nav')
+    };
+
+    function formatNumber(value) {
+      return new Intl.NumberFormat().format(Number(value) || 0);
+    }
+
+    function formatTime(value) {
+      if (!value) return 'Never updated';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return 'Unknown update time';
+      return `Updated ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}`;
+    }
+
+    function formatLastLive(value) {
+      if (!value) return 'Never';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return 'Unknown';
+      return date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    }
+
+    function parseTimestamp(value) {
+      if (!value) return 0;
+      const timestamp = new Date(value).getTime();
+      return Number.isNaN(timestamp) ? 0 : timestamp;
+    }
+
+    function normalize(text) {
+      return String(text || '').toLowerCase();
+    }
+
+    function getInitials(name) {
+      return String(name || '?').trim().slice(0, 2) || '?';
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[char]);
+    }
+
+    function escapeAttribute(value) {
+      return escapeHtml(value);
+    }
+
+    function setTextIfChanged(element, value) {
+      if (element.textContent !== value) {
+        element.textContent = value;
+      }
+    }
+
+    function streamerKey(streamer) {
+      if (streamer.key) return streamer.key;
+      return [
+        normalize(streamer.platform),
+        normalize(streamer.name)
+      ].filter(Boolean).join(':') || normalize(streamer.filename);
+    }
+
+    function currentLiveKeys(streamers) {
+      return new Set(streamers.filter((streamer) => streamer.is_live).map(streamerKey).filter(Boolean));
+    }
+
+    function findNewlyLive(streamers) {
+      const nextLiveKeys = currentLiveKeys(streamers);
+      if (!state.liveKeys) {
+        state.liveKeys = nextLiveKeys;
+        return [];
+      }
+
+      const newlyLive = streamers.filter((streamer) => {
+        const key = streamerKey(streamer);
+        return streamer.is_live && key && !state.liveKeys.has(key);
+      });
+      state.liveKeys = nextLiveKeys;
+      return newlyLive;
+    }
+
+    function clampAudioVolume(value) {
+      if (value === null || value === undefined || value === '') return 50;
+      const volume = Number(value);
+      if (!Number.isFinite(volume)) return 50;
+      return Math.min(100, Math.max(0, Math.round(volume)));
+    }
+
+    function normalizeAudioSound(value) {
+      return Object.prototype.hasOwnProperty.call(AUDIO_ALERT_SOUNDS, value) ? value : 'fanfare';
+    }
+
+    function setAudioVolume(value) {
+      state.audioAlertVolume = clampAudioVolume(value);
+      localStorage.setItem(AUDIO_ALERT_VOLUME_STORAGE_KEY, String(state.audioAlertVolume));
+      els.audioVolume.value = String(state.audioAlertVolume);
+      els.audioVolume.setAttribute('aria-valuetext', `${state.audioAlertVolume}%`);
+      els.audioVolumeWrap.title = `Alert volume: ${state.audioAlertVolume}%`;
+    }
+
+    function setAudioAlertSound(value) {
+      state.audioAlertSound = normalizeAudioSound(value);
+      localStorage.setItem(AUDIO_ALERT_SOUND_STORAGE_KEY, state.audioAlertSound);
+      els.audioSound.value = state.audioAlertSound;
+      els.audioSound.title = `Alert sound: ${AUDIO_ALERT_SOUNDS[state.audioAlertSound].label}`;
+    }
+
+    function setAudioAlerts(enabled) {
+      state.audioAlertsEnabled = enabled;
+      localStorage.setItem(AUDIO_ALERT_STORAGE_KEY, enabled ? 'on' : 'off');
+      els.audioButton.setAttribute('aria-pressed', String(enabled));
+      els.audioButton.setAttribute('aria-label', enabled ? 'Turn audio alerts off' : 'Turn audio alerts on');
+      els.audioButton.title = enabled ? 'Audio alerts on' : 'Audio alerts off';
+      els.audioIcon.innerHTML = enabled
+        ? '<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.4 5.6a9 9 0 0 1 0 12.8"/>'
+        : '<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m16 9 5 5"/><path d="m21 9-5 5"/>';
+    }
+
+    function setAudioSettingsOpen(open) {
+      els.audioControl.classList.toggle('is-open', open);
+    }
+
+    function cancelAudioSettingsClose() {
+      clearTimeout(state.audioSettingsCloseTimer);
+      state.audioSettingsCloseTimer = null;
+    }
+
+    function scheduleAudioSettingsClose() {
+      cancelAudioSettingsClose();
+      state.audioSettingsCloseTimer = window.setTimeout(() => {
+        setAudioSettingsOpen(false);
+        state.audioSettingsCloseTimer = null;
+      }, 350);
+    }
+
+    function hydrateAudioAlerts() {
+      setAudioVolume(localStorage.getItem(AUDIO_ALERT_VOLUME_STORAGE_KEY));
+      setAudioAlertSound(localStorage.getItem(AUDIO_ALERT_SOUND_STORAGE_KEY));
+      setAudioAlerts(localStorage.getItem(AUDIO_ALERT_STORAGE_KEY) !== 'off');
+    }
+
+    function normalizeGridSize(value) {
+      return ['small', 'medium', 'large'].includes(value) ? value : 'medium';
+    }
+
+    function setLiveGridSize(size) {
+      state.liveGridSize = normalizeGridSize(size);
+      localStorage.setItem(LIVE_GRID_SIZE_STORAGE_KEY, state.liveGridSize);
+      els.recordingSection.dataset.gridSize = state.liveGridSize;
+      els.gridSizeButtons.forEach((button) => {
+        button.setAttribute('aria-pressed', String(button.dataset.gridSize === state.liveGridSize));
+      });
+    }
+
+    function hydrateLiveGridSize() {
+      setLiveGridSize(localStorage.getItem(LIVE_GRID_SIZE_STORAGE_KEY));
+    }
+
+    function setGridOnly(enabled) {
+      state.gridOnly = enabled;
+      localStorage.setItem(GRID_ONLY_STORAGE_KEY, enabled ? 'on' : 'off');
+      document.body.dataset.gridOnly = String(enabled);
+      els.gridOnlyButton.setAttribute('aria-pressed', String(enabled));
+      els.gridOnlyButton.setAttribute('aria-label', enabled ? 'Show rows' : 'Show grid only');
+      els.gridOnlyButton.title = enabled ? 'Show rows' : 'Show grid only';
+    }
+
+    function hydrateGridOnly() {
+      setGridOnly(localStorage.getItem(GRID_ONLY_STORAGE_KEY) !== 'off');
+    }
+
+    function setCondensedMetrics(enabled) {
+      state.condensedMetrics = enabled;
+      localStorage.setItem(CONDENSED_METRICS_STORAGE_KEY, enabled ? 'on' : 'off');
+      document.querySelectorAll('.metrics, .toolbar').forEach(el => el.classList.toggle('condensed', enabled));
+      els.dashboardNav.classList.toggle('condensed', enabled);
+      els.condenseButton.setAttribute('aria-pressed', String(enabled));
+      els.condenseButton.setAttribute('aria-label', enabled ? 'Show metrics' : 'Hide metrics');
+      els.condenseButton.title = enabled ? 'Show metrics' : 'Hide metrics';
+    }
+
+    function hydrateCondensedMetrics() {
+      setCondensedMetrics(localStorage.getItem(CONDENSED_METRICS_STORAGE_KEY) !== 'off');
+    }
+
+    function normalizeDestinationPath(value) {
+      return String(value || '').trim().replace(/[\\/]+$/, '');
+    }
+
+    function setDestinationPath(value) {
+      state.destPath = normalizeDestinationPath(value);
+      localStorage.setItem(DEST_PATH_STORAGE_KEY, state.destPath);
+      els.destPathInput.value = state.destPath;
+      render();
+    }
+
+    function hydrateDestinationPath() {
+      state.destPath = normalizeDestinationPath(localStorage.getItem(DEST_PATH_STORAGE_KEY) || '');
+      els.destPathInput.value = state.destPath;
+    }
+
+    function setSettingsOpen(open) {
+      els.settingsPanel.hidden = !open;
+      els.settingsButton.setAttribute('aria-expanded', String(open));
+      if (open) {
+        els.destPathInput.focus();
+        els.destPathInput.select();
+      }
+    }
+
+    function getAudioContext() {
+      if (!state.audioContext) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return null;
+        state.audioContext = new AudioContext();
+      }
+      return state.audioContext;
+    }
+
+    function playSoftAlert() {
+      if (!state.audioAlertsEnabled) return;
+      if (state.audioAlertVolume <= 0) return;
+
+      const audioContext = getAudioContext();
+      if (!audioContext) return;
+
+      const play = () => {
+        const now = audioContext.currentTime;
+        const volume = state.audioAlertVolume / 100;
+        const sound = AUDIO_ALERT_SOUNDS[state.audioAlertSound] || AUDIO_ALERT_SOUNDS.fanfare;
+        const peakGain = AUDIO_ALERT_MAX_GAIN * volume;
+        const masterGain = audioContext.createGain();
+        masterGain.gain.setValueAtTime(0.0001, now);
+        masterGain.gain.exponentialRampToValueAtTime(peakGain, now + 0.025);
+        masterGain.gain.setValueAtTime(peakGain, now + sound.release - 0.04);
+        masterGain.gain.exponentialRampToValueAtTime(0.0001, now + sound.release);
+        masterGain.connect(audioContext.destination);
+
+        sound.notes.forEach((note) => {
+          const oscillator = audioContext.createOscillator();
+          const noteGain = audioContext.createGain();
+          const start = now + note.start;
+          oscillator.type = note.type;
+          oscillator.frequency.setValueAtTime(note.frequency, start);
+          noteGain.gain.setValueAtTime(0.0001, start);
+          noteGain.gain.exponentialRampToValueAtTime(note.gain, start + 0.018);
+          noteGain.gain.exponentialRampToValueAtTime(0.0001, start + note.duration);
+          oscillator.connect(noteGain);
+          noteGain.connect(masterGain);
+          oscillator.start(start);
+          oscillator.stop(start + note.duration + 0.02);
+        });
+      };
+
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().then(play).catch(() => {});
+        return;
+      }
+
+      play();
+    }
+
+    function launchConfetti() {
+      playSoftAlert();
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      const count = 90;
+      const fragment = document.createDocumentFragment();
+      const pieces = [];
+      for (let index = 0; index < count; index += 1) {
+        const piece = document.createElement('span');
+        piece.className = 'confetti-piece';
+        piece.style.left = `${Math.random() * 100}%`;
+        piece.style.background = CONFETTI_COLORS[index % CONFETTI_COLORS.length];
+        piece.style.setProperty('--drift', `${Math.random() * 260 - 130}px`);
+        piece.style.setProperty('--spin', `${Math.random() * 720 + 360}deg`);
+        piece.style.setProperty('--fall-duration', `${Math.random() * 1000 + 1800}ms`);
+        piece.style.animationDelay = `${Math.random() * 420}ms`;
+        pieces.push(piece);
+        fragment.appendChild(piece);
+      }
+
+      els.confettiLayer.appendChild(fragment);
+      window.setTimeout(() => {
+        pieces.forEach((piece) => piece.remove());
+      }, 3400);
+    }
+
+    function alertNewlyLive(streamers) {
+      if (!streamers.length) return false;
+
+      launchConfetti();
+      const names = streamers.map((streamer) => streamer.name || 'A streamer');
+      const label = names.length === 1
+        ? `${names[0]} is live now`
+        : `${names.length} streamers are live now`;
+      els.statusLine.textContent = label;
+      return true;
+    }
+
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      localStorage.setItem('streamcapture-theme', theme);
+      const dark = theme === 'dark';
+      els.themeButton.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+      els.themeIcon.innerHTML = dark
+        ? '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.9 4.9 1.4 1.4"/><path d="m17.7 17.7 1.4 1.4"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.3 17.7-1.4 1.4"/><path d="m19.1 4.9-1.4 1.4"/>'
+        : '<path d="M12 3a6 6 0 0 0 9 7.2A9 9 0 1 1 12 3Z"/>';
+    }
+
+    function hydrateTheme() {
+      const saved = localStorage.getItem('streamcapture-theme');
+      if (saved) {
+        setTheme(saved);
+        return;
+      }
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setTheme(prefersDark ? 'dark' : 'light');
+    }
+
+    function streamUrl(streamer) {
+      const platform = String(streamer.platform || '')
+        .trim()
+        .toLowerCase()
+        .replace(/^https?:\/\/(www\.)?/, '')
+        .replace(/\.com\/?$/, '')
+        .replace(/[^a-z0-9-]/g, '');
+      const name = String(streamer.name || '').trim().replace(/^@/, '');
+
+      if (!platform || !name) return '';
+      return `https://www.${platform}.com/${encodeURIComponent(name)}`;
+    }
+
+    function hasRecordedFile(streamer) {
+      const filename = String(streamer.filename || '').trim();
+      return !streamer.recording && filename && normalize(filename) !== 'no file';
+    }
+
+    function localFilePath(streamer) {
+      if (!state.destPath || !hasRecordedFile(streamer)) return '';
+      return [
+        state.destPath,
+        String(streamer.name || '').trim(),
+        String(streamer.filename || '').trim()
+      ].filter(Boolean).join('\\');
+    }
+
+    function findStreamerByKey(key) {
+      return state.streamers.find((streamer) => streamer.key === key);
+    }
+
+    function copyText(value) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(value);
+      }
+
+      return new Promise((resolve, reject) => {
+        const textarea = document.createElement('textarea');
+        textarea.value = value;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        textarea.style.top = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+
+        try {
+          if (document.execCommand('copy')) {
+            resolve();
+          } else {
+            reject(new Error('Clipboard unavailable'));
+          }
+        } catch (error) {
+          reject(error);
+        } finally {
+          textarea.remove();
+        }
+      });
+    }
+
+    function toastPoint(source) {
+      if (source && typeof source.clientX === 'number' && typeof source.clientY === 'number') {
+        return { x: source.clientX, y: source.clientY };
+      }
+
+      const target = source && source.target && source.target instanceof Element
+        ? source.target
+        : source instanceof Element
+          ? source
+          : document.activeElement;
+      const rect = target && target.getBoundingClientRect ? target.getBoundingClientRect() : null;
+      if (!rect) return { x: window.innerWidth / 2, y: 80 };
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    }
+
+    function showCursorToast(message, source) {
+      const offset = 14;
+      const point = toastPoint(source);
+      const toast = els.cursorToast;
+      toast.textContent = message;
+      toast.hidden = false;
+      toast.classList.remove('visible');
+      toast.style.left = '0px';
+      toast.style.top = '0px';
+
+      window.requestAnimationFrame(() => {
+        const rect = toast.getBoundingClientRect();
+        const maxLeft = Math.max(8, window.innerWidth - rect.width - 8);
+        const maxTop = Math.max(8, window.innerHeight - rect.height - 8);
+        const left = Math.min(maxLeft, Math.max(8, point.x + offset));
+        const top = Math.min(maxTop, Math.max(8, point.y + offset));
+        toast.style.left = `${left}px`;
+        toast.style.top = `${top}px`;
+        toast.classList.add('visible');
+      });
+
+      clearTimeout(state.cursorToastTimer);
+      state.cursorToastTimer = window.setTimeout(() => {
+        toast.classList.remove('visible');
+        window.setTimeout(() => {
+          if (!toast.classList.contains('visible')) {
+            toast.hidden = true;
+          }
+        }, 160);
+      }, 5000);
+    }
+
+    function copyRecordedFilePath(streamer, source) {
+      if (!streamer) return;
+      if (!state.destPath) {
+        els.statusLine.textContent = 'Set a destination path in settings first.';
+        setSettingsOpen(true);
+        return;
+      }
+
+      const path = localFilePath(streamer);
+      if (!path) {
+        els.statusLine.textContent = 'No recorded file path is available.';
+        return;
+      }
+
+      copyText(path)
+        .then(() => {
+          showCursorToast('Copied to Clipboard!', source);
+        })
+        .catch(() => {
+          showCursorToast('Copy failed', source);
+          els.statusLine.textContent = 'Unable to copy file path. Check browser clipboard permissions.';
+        });
+    }
+
+    function platformClass(platform) {
+      const platformName = normalize(platform).trim();
+      if (platformName === 'twitch') return 'platform-twitch';
+      if (platformName === 'kick') return 'platform-kick';
+      return '';
+    }
+
+    function prepareStreamer(streamer) {
+      const sourceName = streamer.name || '';
+      const sourcePlatform = streamer.platform || '';
+      const nameRaw = sourceName || DEFAULT_STREAMER_NAME;
+      const platformRaw = sourcePlatform || DEFAULT_PLATFORM_NAME;
+      const isLive = Boolean(streamer.is_live);
+      const isRecording = Boolean(streamer.recording);
+      const viewerCount = Number(streamer.viewer_count) || 0;
+      const lastLiveAt = parseTimestamp(streamer.last_updated);
+      const recentlyLive = !isLive && !isRecording && lastLiveAt > 0 && Date.now() - lastLiveAt <= RECENT_LIVE_WINDOW_MS;
+      const liveMeta = isLive ? STATUS_META.live : STATUS_META.offline;
+      const recordingMeta = isRecording ? STATUS_META.recording : STATUS_META.idle;
+      const titleRaw = isLive ? (streamer.title || 'Untitled stream') : (streamer.title || 'Offline');
+      const gameRaw = isLive ? (streamer.game_name || 'Unknown category') : (streamer.game_name || 'No active stream');
+      const filenameRaw = streamer.filename || 'No file';
+      const lastLiveLabel = formatLastLive(streamer.last_updated);
+      const key = [
+        normalize(sourcePlatform),
+        normalize(sourceName)
+      ].filter(Boolean).join(':') || normalize(streamer.filename);
+
+      return {
+        ...streamer,
+        key,
+        is_live: isLive,
+        recording: isRecording,
+        viewer_count: viewerCount,
+        lastLiveAt,
+        recentlyLive,
+        display: {
+          name: escapeHtml(nameRaw),
+          platform: escapeHtml(platformRaw),
+          platformClass: platformClass(platformRaw),
+          initials: escapeHtml(getInitials(nameRaw)),
+          title: escapeHtml(titleRaw),
+          game: escapeHtml(gameRaw),
+          filename: escapeHtml(filenameRaw),
+          viewers: formatNumber(viewerCount),
+          lastLive: escapeHtml(lastLiveLabel),
+          url: escapeHtml(streamUrl(streamer)),
+          liveClass: liveMeta.className,
+          liveText: liveMeta.label,
+          recordingClass: recordingMeta.className,
+          recordingText: recordingMeta.label,
+          activityStatus: isRecording ? STATUS_META.recording.label : (isLive ? STATUS_META.live.label : 'Recent offline'),
+          searchable: [
+            sourceName,
+            sourcePlatform,
+            streamer.game_name,
+            streamer.title,
+            streamer.filename,
+            lastLiveLabel
+          ].map(normalize).join(' ')
+        }
+      };
+    }
+
+    function sortStreamers(streamers) {
+      streamers.sort((a, b) => {
+        const rankA = a.recording ? 0 : (a.is_live ? 1 : 2);
+        const rankB = b.recording ? 0 : (b.is_live ? 1 : 2);
+        if (rankA !== rankB) return rankA - rankB;
+
+        if (rankA < 2) {
+          const viewerDifference = b.viewer_count - a.viewer_count;
+          if (viewerDifference) return viewerDifference;
+        } else {
+          const dateDifference = b.lastLiveAt - a.lastLiveAt;
+          if (dateDifference) return dateDifference;
+        }
+
+        return String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }) ||
+          String(a.platform || '').localeCompare(String(b.platform || ''), undefined, { sensitivity: 'base' });
+      });
+      return streamers;
+    }
+
+    function updatePlatformOptions() {
+      const platforms = [...new Set(state.streamers.map((streamer) => streamer.platform).filter(Boolean))].sort();
+      if (platforms.join('|') === state.platforms.join('|')) return;
+
+      state.platforms = platforms;
+      const current = els.platformFilter.value;
+      els.platformFilter.innerHTML = '<option value="all">All platforms</option>';
+      platforms.forEach((platform) => {
+        const option = document.createElement('option');
+        option.value = platform;
+        option.textContent = platform;
+        els.platformFilter.appendChild(option);
+      });
+      els.platformFilter.value = platforms.includes(current) ? current : 'all';
+    }
+
+    function applyFilters() {
+      const query = normalize(els.searchInput.value);
+      const status = els.statusFilter.value;
+      const platform = els.platformFilter.value;
+      const filtered = [];
+      const recording = [];
+      const liveOnly = [];
+      const recentOffline = [];
+      const metrics = { live: 0, recording: 0, viewers: 0, tracked: state.streamers.length };
+
+      state.streamers.forEach((streamer) => {
+        if (streamer.is_live) metrics.live += 1;
+        if (streamer.recording) metrics.recording += 1;
+        metrics.viewers += streamer.viewer_count;
+
+        const matchesSearch = !query || streamer.display.searchable.includes(query);
+        const matchesStatus =
+          status === 'all' ||
+          (status === 'live' && streamer.is_live) ||
+          (status === 'offline' && !streamer.is_live) ||
+          (status === 'recording' && streamer.recording);
+        const matchesPlatform = platform === 'all' || streamer.platform === platform;
+
+        if (!matchesSearch || !matchesStatus || !matchesPlatform) return;
+        filtered.push(streamer);
+        if (streamer.recording) {
+          recording.push(streamer);
+        } else if (streamer.is_live) {
+          liveOnly.push(streamer);
+        } else if (streamer.recentlyLive) {
+          recentOffline.push(streamer);
+        }
+      });
+
+      state.filtered = filtered;
+      state.active = recording.concat(liveOnly);
+      state.recentOffline = recentOffline;
+      state.metrics = metrics;
+      render();
+    }
+
+    function renderMetrics() {
+      const next = {
+        live: formatNumber(state.metrics.live),
+        recording: formatNumber(state.metrics.recording),
+        viewers: formatNumber(state.metrics.viewers),
+        tracked: formatNumber(state.metrics.tracked)
+      };
+
+      if (next.live !== state.renderedMetrics.live) setTextIfChanged(els.liveCount, next.live);
+      if (next.recording !== state.renderedMetrics.recording) setTextIfChanged(els.recordingCount, next.recording);
+      if (next.viewers !== state.renderedMetrics.viewers) setTextIfChanged(els.viewerTotal, next.viewers);
+      if (next.tracked !== state.renderedMetrics.tracked) setTextIfChanged(els.trackedCount, next.tracked);
+      state.renderedMetrics = next;
+    }
+
+    function streamerIdentity(streamer, avatarClass = 'avatar') {
+      return `
+        <div class="streamer">
+          <div class="${avatarClass}" aria-hidden="true">${streamer.display.initials}</div>
+          <div class="name-wrap">
+            <div class="name" title="${streamer.display.name}">${streamer.display.name}</div>
+            <div class="platform">${streamer.display.platform}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function statusPill(className, label) {
+      return `<span class="pill ${className}">${label}</span>`;
+    }
+
+    function activityTileClass(streamer) {
+      if (streamer.recording) return 'recording-tile';
+      if (streamer.is_live) return 'recording-tile live-only';
+      return 'recording-tile recent-offline';
+    }
+
+    function activityTile(streamer) {
+      const tileClass = activityTileClass(streamer);
+      const opensRecordedFile = streamer.recentlyLive && hasRecordedFile(streamer);
+      const href = opensRecordedFile ? '#' : streamer.display.url;
+      const fileAttrs = opensRecordedFile
+        ? ` data-file-key="${escapeAttribute(streamer.key)}" title="Open recorded file"`
+        : '';
+
+      return `
+        <a class="${tileClass}" href="${escapeAttribute(href)}" target="_blank" rel="noopener noreferrer"${fileAttrs}>
+          <div class="recording-summary">
+            <div class="recording-avatar ${streamer.display.platformClass}" aria-hidden="true">${streamer.display.initials}</div>
+            <div class="recording-summary-copy">
+              <div class="recording-name" title="${streamer.display.name}">${streamer.display.name}</div>
+              <div class="recording-meta" title="${streamer.display.platform}">${streamer.display.platform} - ${streamer.display.activityStatus}</div>
+            </div>
+          </div>
+          <div class="recording-details">
+            <div class="recording-title recording-stream-title" title="${streamer.display.title}">${streamer.display.title}</div>
+            <div class="recording-meta recording-last-live" title="Last Live: ${streamer.display.lastLive}">Last Live: ${streamer.display.lastLive}</div>
+            <div class="recording-footer">
+              <div class="recording-title recording-game" title="${streamer.display.game}">${streamer.display.game}</div>
+              <div class="recording-viewer-stack">
+                <div class="recording-title">Viewers:</div>
+                <div class="recording-viewers">${streamer.display.viewers}</div>
+              </div>
+            </div>
+          </div>
+        </a>
+      `;
+    }
+
+    function streamLabel(streamer) {
+      return `<span class="title" title="${streamer.display.title}">${streamer.display.title}</span><div class="game">${streamer.display.game}</div>`;
+    }
+
+    function emptyState() {
+      return `<div class="empty">${EMPTY_FILTER_MESSAGE}</div>`;
+    }
+
+    function renderTable() {
+      els.streamTable.innerHTML = state.filtered.map((streamer) => `
+          <tr data-stream-url="${streamer.display.url}" tabindex="0" role="link" title="Open ${streamer.display.name}">
+            <td>${streamerIdentity(streamer)}</td>
+            <td>${statusPill(streamer.display.liveClass, streamer.display.liveText)}</td>
+            <td>${streamLabel(streamer)}</td>
+            <td><span class="viewers">${streamer.display.viewers}</span></td>
+            <td>${statusPill(streamer.display.recordingClass, streamer.display.recordingText)}</td>
+            <td><span class="filename" title="${streamer.display.lastLive}">${streamer.display.lastLive}</span></td>
+            <td><div class="filename ${hasRecordedFile(streamer) ? 'file-open' : ''}" ${hasRecordedFile(streamer) ? `data-file-key="${escapeAttribute(streamer.key)}" role="button" tabindex="0" title="Open recorded file"` : `title="${streamer.display.filename}"`}>${streamer.display.filename}</div></td>
+          </tr>
+        `).join('');
+      els.emptyTable.hidden = state.filtered.length > 0;
+    }
+
+    function renderActivityGrid() {
+      const activityCount = state.active.length + state.recentOffline.length;
+      const hasActive = state.active.length > 0;
+      const hasRecentOffline = state.recentOffline.length > 0;
+
+      els.recordingSection.hidden = activityCount === 0;
+      setTextIfChanged(
+        els.recordingGridCount,
+        `${formatNumber(activityCount)} ${activityCount === 1 ? 'stream' : 'streams'}`
+      );
+
+      els.recordingGrid.innerHTML = state.active.map(activityTile).join('');
+      els.recentOfflineBreak.hidden = !hasActive || !hasRecentOffline;
+      els.recentOfflineGrid.innerHTML = state.recentOffline.map(activityTile).join('');
+    }
+
+    function renderCards() {
+      els.mobileList.innerHTML = state.filtered.length
+        ? state.filtered.map((streamer) => {
+            return `
+              <article class="stream-card">
+                <div class="card-head">
+                  ${streamerIdentity(streamer)}
+                  <strong class="viewers">${streamer.display.viewers}</strong>
+                </div>
+                <div class="card-pills">
+                  ${statusPill(streamer.display.liveClass, streamer.display.liveText)}
+                  ${statusPill(streamer.display.recordingClass, streamer.display.recordingText)}
+                </div>
+                <div class="card-title">${streamLabel(streamer)}</div>
+                <div class="card-meta">
+                  <div><strong>File</strong><span class="filename" title="${streamer.display.filename}">${streamer.display.filename}</span></div>
+                  <div><strong>Last Live</strong>${streamer.display.lastLive}</div>
+                </div>
+              </article>
+            `;
+          }).join('')
+        : emptyState();
+    }
+
+    function render() {
+      renderMetrics();
+      renderActivityGrid();
+      renderTable();
+      renderCards();
+    }
+
+    async function fetchStatus() {
+      els.refreshButton.disabled = true;
+      try {
+        const response = await fetch(API_URL, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`API returned ${response.status}`);
+        const data = await response.json();
+        state.streamers = sortStreamers((Array.isArray(data.streamers) ? data.streamers : []).map(prepareStreamer));
+        const didAlert = alertNewlyLive(findNewlyLive(state.streamers));
+        state.lastUpdated = new Date();
+        updatePlatformOptions();
+        applyFilters();
+        if (!didAlert) {
+          els.statusLine.textContent = `${formatTime(state.lastUpdated)}`;
+        }
+      } catch (error) {
+        els.statusLine.textContent = `Unable to load status: ${error.message}`;
+      } finally {
+        els.refreshButton.disabled = false;
+      }
+    }
+
+    function startPolling() {
+      clearInterval(state.timer);
+      fetchStatus();
+      state.timer = setInterval(fetchStatus, POLL_INTERVAL_MS);
+    }
+
+    els.refreshButton.addEventListener('click', fetchStatus);
+    els.confettiButton.addEventListener('click', launchConfetti);
+    els.settingsButton.addEventListener('click', () => {
+      setSettingsOpen(els.settingsPanel.hidden);
+    });
+    els.settingsForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      setDestinationPath(els.destPathInput.value);
+      setSettingsOpen(false);
+      els.statusLine.textContent = state.destPath ? `Destination path saved: ${state.destPath}` : 'Destination path cleared.';
+    });
+    document.addEventListener('click', (event) => {
+      if (els.settingsPanel.hidden) return;
+      if (event.target.closest('.settings-wrap')) return;
+      setSettingsOpen(false);
+    });
+    els.gridOnlyButton.addEventListener('click', () => {
+      setGridOnly(!state.gridOnly);
+    });
+    els.audioVolume.addEventListener('input', (event) => {
+      setAudioVolume(event.target.value);
+    });
+    els.audioSound.addEventListener('change', (event) => {
+      setAudioAlertSound(event.target.value);
+      playSoftAlert();
+    });
+    els.audioControl.addEventListener('mouseenter', () => {
+      cancelAudioSettingsClose();
+      setAudioSettingsOpen(true);
+    });
+    els.audioControl.addEventListener('mouseleave', scheduleAudioSettingsClose);
+    els.audioControl.addEventListener('focusin', () => {
+      cancelAudioSettingsClose();
+      setAudioSettingsOpen(true);
+    });
+    els.audioControl.addEventListener('focusout', (event) => {
+      if (els.audioControl.contains(event.relatedTarget)) return;
+      scheduleAudioSettingsClose();
+    });
+    els.gridSizeButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        setLiveGridSize(button.dataset.gridSize);
+      });
+    });
+    els.audioButton.addEventListener('click', () => {
+      const enabled = !state.audioAlertsEnabled;
+      setAudioAlerts(enabled);
+      if (!enabled) return;
+
+      const audioContext = getAudioContext();
+      if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume().catch(() => {});
+      }
+    });
+    els.searchInput.addEventListener('input', applyFilters);
+    els.statusFilter.addEventListener('change', applyFilters);
+    els.platformFilter.addEventListener('change', applyFilters);
+    els.recordingSection.addEventListener('click', (event) => {
+      const fileTarget = event.target.closest('[data-file-key]');
+      if (!fileTarget) return;
+      const streamer = findStreamerByKey(fileTarget.dataset.fileKey);
+      if (!streamer || !hasRecordedFile(streamer)) return;
+      event.preventDefault();
+      copyRecordedFilePath(streamer, event);
+    });
+    els.streamTable.addEventListener('click', (event) => {
+      const fileTarget = event.target.closest('[data-file-key]');
+      if (fileTarget) {
+        const streamer = findStreamerByKey(fileTarget.dataset.fileKey);
+        if (streamer && hasRecordedFile(streamer)) {
+          event.preventDefault();
+          event.stopPropagation();
+          copyRecordedFilePath(streamer, event);
+          return;
+        }
+      }
+
+      const row = event.target.closest('tr[data-stream-url]');
+      if (!row) return;
+      window.open(row.dataset.streamUrl, '_blank', 'noopener,noreferrer');
+    });
+    els.streamTable.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const fileTarget = event.target.closest('[data-file-key]');
+      if (fileTarget) {
+        const streamer = findStreamerByKey(fileTarget.dataset.fileKey);
+        if (streamer && hasRecordedFile(streamer)) {
+          event.preventDefault();
+          copyRecordedFilePath(streamer, fileTarget);
+          return;
+        }
+      }
+
+      const row = event.target.closest('tr[data-stream-url]');
+      if (!row) return;
+      event.preventDefault();
+      window.open(row.dataset.streamUrl, '_blank', 'noopener,noreferrer');
+    });
+    els.themeButton.addEventListener('click', () => {
+      const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      setTheme(next);
+    });
+    els.condenseButton.addEventListener('click', () => {
+      setCondensedMetrics(!state.condensedMetrics);
+    });
+
+    hydrateAudioAlerts();
+    hydrateLiveGridSize();
+    hydrateGridOnly();
+    hydrateCondensedMetrics();
+    hydrateDestinationPath();
+    hydrateTheme();
+    startPolling();
+  </script>
+</body>
+</html>
